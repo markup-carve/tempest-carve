@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use MarkupCarve\Tempest\CarveRenderer;
 use PHPUnit\Framework\Attributes\Test;
 
 final class CarveComponentTest extends IntegrationTestCase
 {
     #[Test]
-    public function it_renders_carve_and_escapes_raw_html(): void
+    public function testRendersCarveAndEscapesRawHtml(): void
     {
         $html = $this->view->render(
             __DIR__ . '/Fixtures/carve.view.php',
@@ -28,5 +29,20 @@ final class CarveComponentTest extends IntegrationTestCase
         self::assertStringContainsString('<em>Rendered</em> through an <code>x-carve</code> component.', $html);
         self::assertStringContainsString("&lt;script&gt;alert('unsafe')&lt;/script&gt;", $html);
         self::assertStringNotContainsString("<script>alert('unsafe')</script>", $html);
+    }
+
+    #[Test]
+    public function testRendererIsASingleton(): void
+    {
+        self::assertSame(
+            $this->container->get(CarveRenderer::class),
+            $this->container->get(CarveRenderer::class),
+        );
+    }
+
+    #[Test]
+    public function testContentDefaultsToEmptyInput(): void
+    {
+        self::assertSame('', trim($this->view->render('<x-carve />')));
     }
 }

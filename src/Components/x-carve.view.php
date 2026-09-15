@@ -1,14 +1,13 @@
 <?php
 
+use MarkupCarve\Tempest\CarveRenderer;
+use function Tempest\Container\get;
+
 /**
  * @var string|null $content Carve content passed through the content attribute
  */
-
-use MarkupCarve\Carve\CarveConverter;
-
-use function Tempest\Container\get;
-
-$html = get(CarveConverter::class)->convert($content ?? '');
+$content ??= null;
+$html = get(CarveRenderer::class)->render($content ?? '');
 ?>
 
 {!! $html !!}

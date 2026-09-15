@@ -10,12 +10,24 @@
         "view-component"
     ],
     "homepage": "https://markup-carve.github.io/carve/",
+    "support": {
+        "issues": "https://github.com/markup-carve/carve-tempest/issues",
+        "source": "https://github.com/markup-carve/carve-tempest"
+    },
+    "authors": [
+        {
+            "name": "Mark Scherer",
+            "homepage": "https://github.com/dereuromark"
+        }
+    ],
     "require": {
         "php": "^8.5",
         "markup-carve/carve-php": "^0.1.7",
         "tempest/view": "^3.19"
     },
     "require-dev": {
+        "php-collective/code-sniffer": "^0.6.8",
+        "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5",
         "tempest/framework": "^3.19"
     },
@@ -30,9 +42,20 @@
         }
     },
     "scripts": {
+        "check": [
+            "@cs-check",
+            "@stan",
+            "@test"
+        ],
+        "cs-check": "phpcs --colors --parallel=16",
+        "cs-fix": "phpcbf --colors --parallel=16",
+        "stan": "phpstan analyze",
         "test": "phpunit"
     },
     "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
         "sort-packages": true
     }
 }
