@@ -15,4 +15,9 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Safe-by-default `x-carve` Tempest View component
 - Discoverable singleton `CarveRenderer` service
+- Tempest-native configuration with named profiles and extension registration
+- Optional content-hash rendering cache through Tempest Cache
+- Rendering diagnostics, profile violations, and bounded loss reports
+- Opt-in source-line annotations for editor preview synchronization
+- HTML, Markdown, plain-text, and ANSI service outputs
 - Tempest integration and security tests

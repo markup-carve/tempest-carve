@@ -15,3 +15,8 @@ configured `CarveConverter` in their own application code instead of the
 to content controlled by trusted authors. See the
 [`carve-php` security guide](https://github.com/markup-carve/carve-php/blob/main/docs/security.md)
 before doing so.
+
+Profiles restrict which Carve features may be published but do not replace safe
+mode. Cache keys include the source and rendering configuration; use a dedicated
+cache store if application policy requires Carve output to be isolated from
+other cached data.
