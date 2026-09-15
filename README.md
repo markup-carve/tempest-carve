@@ -4,8 +4,6 @@ Render [Carve](https://markup-carve.github.io/carve/) content in
 [Tempest](https://tempestphp.com/) views with a safe-by-default component.
 
 ```sh
-composer config repositories.tempest-carve vcs \
-  https://github.com/markup-carve/tempest-carve.git
 composer require markup-carve/tempest-carve:dev-main
 php tempest discovery:generate --no-interaction
 ```
