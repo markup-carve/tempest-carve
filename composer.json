@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.5",
-        "markup-carve/carve-php": "^0.1.7",
+        "markup-carve/carve-php": "dev-main as 0.1.999",
         "tempest/cache": "^3.19",
         "tempest/view": "^3.19"
     },
@@ -32,6 +32,9 @@
         "phpunit/phpunit": "^12.5",
         "symfony/cache": "^7.3 || ^8.0",
         "tempest/framework": "^3.19"
+    },
+    "suggest": {
+        "phpunit/phpunit": "Required to use the optional CarveAssertions testing trait."
     },
     "autoload": {
         "psr-4": {

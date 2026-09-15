@@ -21,6 +21,8 @@ final readonly class CarveConfig
      * @param string|null $cacheStore
      * @param \Tempest\DateTime\Duration|null $cacheExpiration
      * @param bool $cacheEnabled
+     * @param array<string, self> $namedRenderers
+     * @param class-string<\MarkupCarve\Carve\Transform\IncludeResolverInterface>|null $includeResolver
      */
     public function __construct(
         public CarveProfile|Profile|null $profile = null,
@@ -32,6 +34,8 @@ final readonly class CarveConfig
         public ?Duration $cacheExpiration = null,
         public ?string $cacheStore = null,
         public string $cacheKeySalt = '',
+        public array $namedRenderers = [],
+        public ?string $includeResolver = null,
     ) {
     }
 

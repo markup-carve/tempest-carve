@@ -74,3 +74,42 @@ the selected profile removed or degraded. Loss collection is bounded to 100
 entries by default and can be changed with the third method argument.
 Report rendering bypasses the output cache so its diagnostics always describe
 the current source.
+
+## Includes
+
+After configuring an include resolver, render a composed document with bounded
+expansion options:
+
+```php
+use MarkupCarve\Tempest\IncludeOptions;
+
+$result = $carve->renderIncluded(
+    $source,
+    new IncludeOptions(currentPath: 'articles/handbook.crv'),
+);
+
+$result->html;
+$result->warnings;
+$result->dependencies;
+$result->suppressedWarnings;
+```
+
+The dependency list contains canonical targets and resolution status, making it
+suitable for preview invalidation and build tooling.
+
+## Test assertions
+
+PHPUnit test cases may use `MarkupCarve\Tempest\Testing\CarveAssertions` for
+focused rendering, safety, and warning assertions:
+
+```php
+use MarkupCarve\Tempest\Testing\CarveAssertions;
+
+final class ArticleTest extends TestCase
+{
+    use CarveAssertions;
+}
+```
+
+`assertCarveIsSafe()` checks that a specific unsafe substring is absent; it is a
+focused regression assertion, not a general-purpose HTML security scanner.

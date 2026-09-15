@@ -28,6 +28,10 @@ return new CarveConfig(
     cacheEnabled: true,
     cacheExpiration: Duration::hours(1),
     cacheKeySalt: 'site-rendering-v1',
+    namedRenderers: [
+        'comments' => new CarveConfig(profile: CarveProfile::Comment),
+    ],
+    includeResolver: App\Content\DatabaseIncludeResolver::class,
 );
 ```
 
@@ -63,3 +67,34 @@ loss positions always describe the current source.
 Set `sourceLines` to `true` to add 1-based `data-source-line` attributes to
 rendered block elements. This is intended for editor preview synchronization
 and is off by default to keep normal HTML output unchanged.
+
+## Named renderers
+
+Use `namedRenderers` when one application publishes distinct kinds of content.
+Each entry has its own profile, extensions, cache store, and include resolver:
+
+```php
+$html = $carve->named('comments')->render($comment->body);
+```
+
+For a one-off policy change, render and report methods also accept a profile:
+
+```php
+$html = $carve->render($source, CarveProfile::Comment);
+```
+
+## Includes
+
+Set `includeResolver` to a container-resolvable implementation of carve-php's
+`IncludeResolverInterface`. This keeps storage decisions in the application;
+resolvers may use a contained filesystem root, database records, or another
+trusted source. Call `renderIncluded()` to receive HTML together with include
+warnings, dependencies, and the suppressed-warning count.
+
+Include output is cached only when the resolver also implements
+`IncludeCacheKeyProvider`. Its key must identify the resolver's scope and change
+whenever any content reachable through it changes. Resolvers without that
+contract remain correct by bypassing the output cache. Expansion and dependency
+discovery still run on each request; only final HTML rendering is cached.
+The renderer samples the key before and after expansion and skips the cache when
+content changes during that window.
