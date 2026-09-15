@@ -14,19 +14,19 @@ Render it with the package component:
 </article>
 ```
 
-The package registers `MarkupCarve\Carve\CarveConverter` as a singleton, so it
+The package registers `MarkupCarve\Tempest\CarveRenderer` as a singleton, so it
 can also be injected directly:
 
 ```php
-use MarkupCarve\Carve\CarveConverter;
+use MarkupCarve\Tempest\CarveRenderer;
 
 final readonly class RenderExcerpt
 {
-    public function __construct(private CarveConverter $carve) {}
+    public function __construct(private CarveRenderer $carve) {}
 
     public function __invoke(string $source): string
     {
-        return $this->carve->convert($source);
+        return $this->carve->render($source);
     }
 }
 ```
