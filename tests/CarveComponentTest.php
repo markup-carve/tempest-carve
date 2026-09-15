@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use MarkupCarve\Carve\Extension\HeadingNumbersExtension;
+use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveRenderer;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -44,5 +46,34 @@ final class CarveComponentTest extends IntegrationTestCase
     public function testContentDefaultsToEmptyInput(): void
     {
         self::assertSame('', trim($this->view->render('<x-carve />')));
+    }
+
+    #[Test]
+    public function testDiscoversDefaultCarveConfiguration(): void
+    {
+        self::assertInstanceOf(CarveConfig::class, $this->container->get(CarveConfig::class));
+    }
+
+    #[Test]
+    public function testInitializesConfiguredExtensions(): void
+    {
+        $this->container->config(new CarveConfig(
+            extensions: [HeadingNumbersExtension::class],
+        ));
+
+        $html = $this->container->get(CarveRenderer::class)->render('# Heading');
+
+        self::assertStringContainsString('<span class="section-number">1</span> Heading', $html);
+    }
+
+    #[Test]
+    public function testInitializesConfiguredCache(): void
+    {
+        $cache = $this->cache->fake();
+        $this->container->config(new CarveConfig(cacheEnabled: true));
+
+        $this->container->get(CarveRenderer::class)->render('/cached/');
+
+        $cache->assertNotEmpty();
     }
 }

@@ -13,5 +13,5 @@ php tempest discovery:generate --no-interaction
 ```
 
 Tempest discovers the component and its `CarveRenderer` initializer from the
-package. See [Usage](docs/usage.md), [Design](docs/design.md), and
-[Security](docs/security.md) for details.
+package. See [Usage](docs/usage.md), [Configuration](docs/configuration.md),
+[Design](docs/design.md), and [Security](docs/security.md) for details.

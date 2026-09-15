@@ -8,7 +8,9 @@ The package follows the shape of Tempest's built-in `x-markdown` support:
 
 1. Tempest discovers the vendor-provided `x-carve.view.php` component.
 2. It discovers an initializer that registers a singleton `CarveRenderer`.
-3. The component resolves that converter and emits the rendered HTML.
+3. The initializer applies the discovered `CarveConfig` and resolves configured
+   extensions and an optional Tempest cache.
+4. The component resolves that renderer and emits the rendered HTML.
 
 Depending on `tempest/view` makes the package discoverable without application
 service-provider code. The integration uses the native PHP Carve implementation
@@ -19,7 +21,9 @@ The component deliberately accepts source through its `content` attribute.
 Inline slot content is first interpreted by Tempest View and is therefore not a
 reliable transport for arbitrary Carve source containing template expressions.
 
-`CarveRenderer` owns the `carve-php` converter instead of registering that
-third-party class directly in Tempest's container. This keeps the integration's
-safe defaults behind a stable, narrow API and avoids claiming a shared binding
-that another package or application may also want to configure.
+`CarveRenderer` owns one configured `carve-php` converter per output format
+instead of registering that third-party class directly in Tempest's container.
+This keeps the integration's safe defaults behind a stable API and avoids
+claiming a shared binding that another package or application may also want to
+configure. Diagnostic rendering uses a separate warning-enabled converter and
+bypasses output caching.

@@ -23,18 +23,23 @@
     "require": {
         "php": "^8.5",
         "markup-carve/carve-php": "^0.1.7",
+        "tempest/cache": "^3.19",
         "tempest/view": "^3.19"
     },
     "require-dev": {
         "php-collective/code-sniffer": "^0.6.8",
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5",
+        "symfony/cache": "^7.3 || ^8.0",
         "tempest/framework": "^3.19"
     },
     "autoload": {
         "psr-4": {
             "MarkupCarve\\Tempest\\": "src/"
-        }
+        },
+        "exclude-from-classmap": [
+            "/src/carve.config.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
