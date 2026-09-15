@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use InvalidArgumentException;
 use MarkupCarve\Carve\Extension\HeadingNumbersExtension;
 use MarkupCarve\Carve\Renderer\SmartTypographyMode;
 use MarkupCarve\Carve\Renderer\SoftBreakMode;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveProfile;
 use MarkupCarve\Tempest\CarveRenderer;
+use MarkupCarve\Tempest\IncludeOptions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Tempest\Cache\GenericCache;
+use Tests\Fixtures\DatabaseIncludeResolver;
 use Tests\Fixtures\NonSerializableExtension;
 use UnexpectedValueException;
 
@@ -201,5 +204,120 @@ final class CarveRendererTest extends TestCase
         );
 
         self::assertStringContainsString('<em>cached</em>', $renderer->render('/cached/'));
+    }
+
+    #[Test]
+    public function testOverridesProfilePerRender(): void
+    {
+        $renderer = CarveRenderer::safe(new CarveConfig(profile: CarveProfile::Article));
+
+        self::assertStringContainsString('<h1>Heading</h1>', $renderer->render('# Heading'));
+        self::assertStringContainsString('<p># Heading</p>', $renderer->render('# Heading', CarveProfile::Comment));
+    }
+
+    #[Test]
+    public function testSelectsNamedRenderers(): void
+    {
+        $comment = CarveRenderer::safe(new CarveConfig(profile: CarveProfile::Comment));
+        $renderer = CarveRenderer::safe(namedRenderers: ['comment' => $comment]);
+
+        self::assertStringContainsString('<p># Heading</p>', $renderer->named('comment')->render('# Heading'));
+    }
+
+    #[Test]
+    public function testRendersIncludesWithDependenciesAndWarnings(): void
+    {
+        $resolver = new DatabaseIncludeResolver();
+        $renderer = CarveRenderer::safe(includeResolver: $resolver);
+
+        $result = $renderer->renderIncluded("{{ chapter }}\n\n{{ missing }}");
+
+        self::assertStringContainsString('<h1>Database chapter</h1>', $result->html);
+        self::assertSame([
+            ['target' => 'db:chapter', 'resolved' => true],
+            ['target' => 'missing', 'resolved' => false],
+        ], $result->dependencies);
+        self::assertSame('include', $result->warnings[0]['category']);
+        self::assertStringContainsString('missing', $result->warnings[0]['message']);
+    }
+
+    #[Test]
+    public function testIncludeCacheChangesWithResolverVersion(): void
+    {
+        $adapter = new ArrayAdapter();
+        $resolver = new DatabaseIncludeResolver();
+        $renderer = CarveRenderer::safe(
+            new CarveConfig(cacheEnabled: true),
+            new GenericCache($adapter),
+            includeResolver: $resolver,
+        );
+
+        $first = $renderer->renderIncluded('{{ chapter }}');
+        $resolver->documents['chapter'] = '# Changed chapter';
+        $resolver->version = '2';
+        $second = $renderer->renderIncluded('{{ chapter }}');
+
+        self::assertStringContainsString('Database chapter', $first->html);
+        self::assertStringContainsString('Changed chapter', $second->html);
+        self::assertCount(2, $adapter->getValues());
+    }
+
+    #[Test]
+    public function testIncludeCacheSeparatesOptions(): void
+    {
+        $adapter = new ArrayAdapter();
+        $renderer = CarveRenderer::safe(
+            new CarveConfig(cacheEnabled: true),
+            new GenericCache($adapter),
+            includeResolver: new DatabaseIncludeResolver(),
+        );
+
+        $renderer->renderIncluded('{{ chapter }}', new IncludeOptions(currentPath: 'one'));
+        $renderer->renderIncluded('{{ chapter }}', new IncludeOptions(currentPath: 'two'));
+
+        self::assertCount(2, $adapter->getValues());
+    }
+
+    #[Test]
+    public function testSkipsIncludeCacheWhenResolverChangesDuringExpansion(): void
+    {
+        $adapter = new ArrayAdapter();
+        $resolver = new DatabaseIncludeResolver(changeVersionOnResolve: true);
+        $renderer = CarveRenderer::safe(
+            new CarveConfig(cacheEnabled: true),
+            new GenericCache($adapter),
+            includeResolver: $resolver,
+        );
+
+        $result = $renderer->renderIncluded('{{ chapter }}');
+
+        self::assertStringContainsString('Database chapter', $result->html);
+        self::assertCount(0, $adapter->getValues());
+    }
+
+    #[Test]
+    public function testProfileOverrideAppliesToIncludedContent(): void
+    {
+        $renderer = CarveRenderer::safe(includeResolver: new DatabaseIncludeResolver());
+
+        $result = $renderer->renderIncluded('{{ chapter }}', profile: CarveProfile::Comment);
+
+        self::assertStringContainsString('<p># Database chapter</p>', $result->html);
+    }
+
+    #[Test]
+    public function testRejectsUnknownNamedRenderer(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        CarveRenderer::safe()->named('missing');
+    }
+
+    #[Test]
+    public function testRequiresAnIncludeResolver(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        CarveRenderer::safe()->renderIncluded('{{ chapter }}');
     }
 }

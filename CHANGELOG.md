@@ -20,4 +20,8 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rendering diagnostics, profile violations, and bounded loss reports
 - Opt-in source-line annotations for editor preview synchronization
 - HTML, Markdown, plain-text, and ANSI service outputs
+- Container-resolved include resolvers with structured results and bounded expansion
+- Dependency-aware include caching through resolver-provided invalidation keys
+- Named renderer configurations and per-call profile overrides
+- Reusable PHPUnit assertions for rendering, safety, and warnings
 - Tempest integration and security tests

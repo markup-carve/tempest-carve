@@ -6,8 +6,10 @@ namespace Tests;
 
 use MarkupCarve\Carve\Extension\HeadingNumbersExtension;
 use MarkupCarve\Tempest\CarveConfig;
+use MarkupCarve\Tempest\CarveProfile;
 use MarkupCarve\Tempest\CarveRenderer;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Fixtures\DatabaseIncludeResolver;
 
 final class CarveComponentTest extends IntegrationTestCase
 {
@@ -75,5 +77,21 @@ final class CarveComponentTest extends IntegrationTestCase
         $this->container->get(CarveRenderer::class)->render('/cached/');
 
         $cache->assertNotEmpty();
+    }
+
+    #[Test]
+    public function testInitializesNamedRenderersAndIncludeResolver(): void
+    {
+        $this->container->config(new CarveConfig(
+            namedRenderers: [
+                'comments' => new CarveConfig(profile: CarveProfile::Comment),
+            ],
+            includeResolver: DatabaseIncludeResolver::class,
+        ));
+
+        $renderer = $this->container->get(CarveRenderer::class);
+
+        self::assertStringContainsString('<p># Heading</p>', $renderer->named('comments')->render('# Heading'));
+        self::assertStringContainsString('Database chapter', $renderer->renderIncluded('{{ chapter }}')->html);
     }
 }

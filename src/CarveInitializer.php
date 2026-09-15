@@ -26,7 +26,28 @@ final class CarveInitializer implements Initializer
             $config->extensions,
         );
 
-        return new CarveRenderer($config, $cache, $extensions);
+        $resolver = $config->includeResolver === null
+            ? null
+            : $container->get($config->includeResolver);
+        $named = [];
+        foreach ($config->namedRenderers as $name => $namedConfig) {
+            if ($namedConfig->namedRenderers !== []) {
+                throw new InvalidArgumentException('Nested named Carve renderers are not supported.');
+            }
+            $namedExtensions = array_map(
+                fn (string $extension): ExtensionInterface => $this->resolveExtension($container, $extension),
+                $namedConfig->extensions,
+            );
+            $namedCache = $namedConfig->cacheEnabled
+                ? $container->get(Cache::class, $namedConfig->cacheStore)
+                : null;
+            $namedResolver = $namedConfig->includeResolver === null
+                ? null
+                : $container->get($namedConfig->includeResolver);
+            $named[$name] = new CarveRenderer($namedConfig, $namedCache, $namedExtensions, includeResolver: $namedResolver);
+        }
+
+        return new CarveRenderer($config, $cache, $extensions, $named, $resolver);
     }
 
     /**

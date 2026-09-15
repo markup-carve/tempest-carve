@@ -14,6 +14,9 @@ php tempest discovery:generate --no-interaction
 <x-carve :content="$document" />
 ```
 
+The renderer also supports named configurations, per-call profiles, four output
+formats, diagnostics, dependency-aware includes, caching, and test assertions.
+
 Tempest discovers the component and its `CarveRenderer` initializer from the
 package. See [Usage](docs/usage.md), [Configuration](docs/configuration.md),
 [Design](docs/design.md), and [Security](docs/security.md) for details.
