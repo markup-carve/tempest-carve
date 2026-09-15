@@ -7,6 +7,10 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed the Composer package to `markup-carve/tempest-carve`
+
 ### Added
 
 - Safe-by-default `x-carve` Tempest View component

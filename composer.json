@@ -1,5 +1,5 @@
 {
-    "name": "markup-carve/carve-tempest",
+    "name": "markup-carve/tempest-carve",
     "description": "Carve rendering for Tempest applications.",
     "type": "library",
     "license": "MIT",
@@ -11,8 +11,8 @@
     ],
     "homepage": "https://markup-carve.github.io/carve/",
     "support": {
-        "issues": "https://github.com/markup-carve/carve-tempest/issues",
-        "source": "https://github.com/markup-carve/carve-tempest"
+        "issues": "https://github.com/markup-carve/tempest-carve/issues",
+        "source": "https://github.com/markup-carve/tempest-carve"
     },
     "authors": [
         {

@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<ruleset name="carve-tempest">
+<ruleset name="tempest-carve">
     <arg value="nps" />
     <arg name="cache" value=".phpcs.cache" />
 
