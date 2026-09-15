@@ -1,0 +1,38 @@
+{
+    "name": "markup-carve/carve-tempest",
+    "description": "Carve rendering for Tempest applications.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "carve",
+        "markup",
+        "tempest",
+        "view-component"
+    ],
+    "homepage": "https://markup-carve.github.io/carve/",
+    "require": {
+        "php": "^8.5",
+        "markup-carve/carve-php": "^0.1.7",
+        "tempest/view": "^3.19"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.5",
+        "tempest/framework": "^3.19"
+    },
+    "autoload": {
+        "psr-4": {
+            "MarkupCarve\\Tempest\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
