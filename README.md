@@ -3,6 +3,7 @@
 [![CI](https://github.com/markup-carve/tempest-carve/actions/workflows/ci.yml/badge.svg)](https://github.com/markup-carve/tempest-carve/actions/workflows/ci.yml)
 [![PHP](https://img.shields.io/badge/PHP-%5E8.5-777bb4)](composer.json)
 [![Tempest](https://img.shields.io/badge/Tempest-%5E3.19-1a1a1a)](https://tempestphp.com/)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%209-brightgreen.svg?style=flat)](https://phpstan.org/)
 [![License](https://img.shields.io/github/license/markup-carve/tempest-carve)](LICENSE)
 
 Render [Carve](https://markup-carve.github.io/carve/) content in
