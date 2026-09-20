@@ -7,12 +7,11 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Changed
-
-- Renamed the Composer package to `markup-carve/tempest-carve`
+## [0.1.0] - 2026-09-20
 
 ### Added
 
+- First release: Carve rendering for Tempest applications
 - Safe-by-default `x-carve` Tempest View component
 - Discoverable singleton `CarveRenderer` service
 - Tempest-native configuration with named profiles and extension registration
@@ -24,4 +23,3 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Dependency-aware include caching through resolver-provided invalidation keys
 - Named renderer configurations and per-call profile overrides
 - Reusable PHPUnit assertions for rendering, safety, and warnings
-- Tempest integration and security tests
