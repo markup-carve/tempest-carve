@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.5",
-        "markup-carve/carve-php": "dev-main as 0.1.999",
+        "markup-carve/carve-php": "^0.1.9",
         "tempest/cache": "^3.19",
         "tempest/view": "^3.19"
     },
