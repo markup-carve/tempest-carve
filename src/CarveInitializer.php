@@ -21,10 +21,7 @@ final class CarveInitializer implements Initializer
             ? $container->get(Cache::class, $config->cacheStore)
             : null;
 
-        $extensions = array_map(
-            fn (string $extension): ExtensionInterface => $this->resolveExtension($container, $extension),
-            $config->extensions,
-        );
+        [$extensions, $extensionKeys] = $this->resolveExtensions($container, $config->extensions);
 
         $resolver = $config->includeResolver === null
             ? null
@@ -34,20 +31,44 @@ final class CarveInitializer implements Initializer
             if ($namedConfig->namedRenderers !== []) {
                 throw new InvalidArgumentException('Nested named Carve renderers are not supported.');
             }
-            $namedExtensions = array_map(
-                fn (string $extension): ExtensionInterface => $this->resolveExtension($container, $extension),
-                $namedConfig->extensions,
-            );
+            [$namedExtensions, $namedKeys] = $this->resolveExtensions($container, $namedConfig->extensions);
             $namedCache = $namedConfig->cacheEnabled
                 ? $container->get(Cache::class, $namedConfig->cacheStore)
                 : null;
             $namedResolver = $namedConfig->includeResolver === null
                 ? null
                 : $container->get($namedConfig->includeResolver);
-            $named[$name] = new CarveRenderer($namedConfig, $namedCache, $namedExtensions, includeResolver: $namedResolver);
+            $named[$name] = new CarveRenderer($namedConfig, $namedCache, $namedExtensions, includeResolver: $namedResolver, extensionKeys: $namedKeys);
         }
 
-        return new CarveRenderer($config, $cache, $extensions, $named, $resolver);
+        return new CarveRenderer($config, $cache, $extensions, $named, $resolver, $extensionKeys);
+    }
+
+    /**
+     * @param \Tempest\Container\Container $container
+     * @param list<string|array<string, mixed>> $entries
+     *
+     * @return array{0: list<\MarkupCarve\Carve\Extension\ExtensionInterface>, 1: array<int, string>}
+     */
+    private function resolveExtensions(Container $container, array $entries): array
+    {
+        $factory = new ExtensionFactory();
+        $extensions = [];
+        $keys = [];
+        foreach ($entries as $index => $entry) {
+            if (is_string($entry) && class_exists($entry)) {
+                $extensions[] = $this->resolveExtension($container, $entry);
+
+                continue;
+            }
+            $extensions[] = $factory->create($entry);
+            $key = $factory->fingerprint($entry);
+            if ($key !== null) {
+                $keys[$index] = $key;
+            }
+        }
+
+        return [$extensions, $keys];
     }
 
     /**

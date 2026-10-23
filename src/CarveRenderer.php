@@ -6,8 +6,12 @@ namespace MarkupCarve\Tempest;
 
 use InvalidArgumentException;
 use MarkupCarve\Carve\CarveConverter;
+use MarkupCarve\Carve\Converter\HtmlToCarve;
+use MarkupCarve\Carve\Converter\MarkdownToCarve;
 use MarkupCarve\Carve\Exception\ParseWarning;
 use MarkupCarve\Carve\Extension\ExtensionInterface;
+use MarkupCarve\Carve\Lint\DocumentLinter;
+use MarkupCarve\Carve\Lint\IncludeLinter;
 use MarkupCarve\Carve\Profile;
 use MarkupCarve\Carve\ProfileViolation;
 use MarkupCarve\Carve\Renderer\AnsiRenderer;
@@ -46,11 +50,17 @@ final class CarveRenderer
     private array $namedRenderers;
 
     /**
+     * @var array<int, string>
+     */
+    private array $extensionKeys;
+
+    /**
      * @param \MarkupCarve\Tempest\CarveConfig $config
      * @param \Tempest\Cache\Cache|null $cache
      * @param iterable<\MarkupCarve\Carve\Extension\ExtensionInterface> $extensions
      * @param array<string, self> $namedRenderers
      * @param \MarkupCarve\Carve\Transform\IncludeResolverInterface|null $includeResolver
+     * @param array<int, string> $extensionKeys Cache fingerprints by extension position, for extensions built from config entries
      */
     public function __construct(
         private readonly CarveConfig $config = new CarveConfig(),
@@ -58,9 +68,11 @@ final class CarveRenderer
         iterable $extensions = [],
         array $namedRenderers = [],
         private readonly ?IncludeResolverInterface $includeResolver = null,
+        array $extensionKeys = [],
     ) {
         $this->extensions = array_values([...$extensions]);
         $this->namedRenderers = $namedRenderers;
+        $this->extensionKeys = $extensionKeys;
         $this->configurationFingerprint = $this->configurationFingerprint();
     }
 
@@ -239,6 +251,63 @@ final class CarveRenderer
         );
     }
 
+    /**
+     * Lint Carve source with every rule of the engine's document linter.
+     *
+     * The configured extensions are passed on, so references to targets an
+     * extension defines are not reported as unresolved.
+     *
+     * @return list<\MarkupCarve\Carve\Lint\LintWarning>
+     */
+    public function lint(string $source): array
+    {
+        return (new DocumentLinter())->lint($source, ['extensions' => $this->cloneExtensions()]);
+    }
+
+    /**
+     * Lint Carve source and every file its include directives pull in.
+     *
+     * Findings from an included file carry `file` and `includedBy`.
+     *
+     * @param string $source
+     * @param string|null $sourcePath
+     * @param \MarkupCarve\Carve\Transform\IncludeResolverInterface|null $resolver Defaults to the configured include resolver
+     *
+     * @throws \InvalidArgumentException
+     *
+     * @return list<\MarkupCarve\Carve\Lint\LintWarning>
+     */
+    public function lintIncluded(string $source, ?string $sourcePath = null, ?IncludeResolverInterface $resolver = null): array
+    {
+        $resolver ??= $this->includeResolver
+            ?? throw new InvalidArgumentException('No Carve include resolver is configured.');
+
+        return (new IncludeLinter())->lint(
+            $source,
+            ['extensions' => $this->cloneExtensions()],
+            $resolver,
+            $sourcePath,
+        );
+    }
+
+    /**
+     * Canonical Carve source, as `carve fmt` prints it.
+     */
+    public function format(string $source, bool $alignTables = false): string
+    {
+        return CarveConverter::toCarve($source, $alignTables);
+    }
+
+    public function fromMarkdown(string $source): string
+    {
+        return (new MarkdownToCarve())->convert($source);
+    }
+
+    public function fromHtml(string $source): string
+    {
+        return (new HtmlToCarve())->convert($source);
+    }
+
     private function renderOutput(OutputFormat $output, string $source, CarveProfile|Profile|null $profile = null): string
     {
         $resolvedProfile = $profile instanceof CarveProfile ? $profile->create() : $profile;
@@ -336,10 +405,10 @@ final class CarveRenderer
         $profileKey = $profile instanceof CarveProfile
             ? $profile->value
             : ($profile === null ? 'none' : $this->objectFingerprint($profile));
-        $extensions = array_map(
-            fn (ExtensionInterface $extension): string => $this->objectFingerprint($extension),
-            $this->extensions,
-        );
+        $extensions = [];
+        foreach ($this->extensions as $index => $extension) {
+            $extensions[] = $this->extensionKeys[$index] ?? $this->objectFingerprint($extension);
+        }
 
         $configuration = json_encode([
             'profile' => $profileKey,

@@ -23,6 +23,10 @@ php tempest discovery:generate --no-interaction
 
 The renderer also supports named configurations, per-call profiles, four output
 formats, diagnostics, dependency-aware includes, caching, and test assertions.
+It lints, formats and imports Markdown or HTML, and ships the console commands
+`carve:render`, `carve:lint`, `carve:fmt` and `carve:convert`, a `ValidCarve`
+validation rule, a `CarveContent` model property type, and an optional
+code highlighter.
 
 Tempest discovers the component and its `CarveRenderer` initializer from the
 package. See [Usage](docs/usage.md), [Configuration](docs/configuration.md),
@@ -34,3 +38,5 @@ package. See [Usage](docs/usage.md), [Configuration](docs/configuration.md),
 adds Carve as a language to [tempest/highlight](https://github.com/tempestphp/highlight),
 so a `.crv` source listing can be syntax-highlighted. That is the complement to
 this package: this one renders Carve to output, that one colors the source.
+With both installed, the `tempest_highlight` extension highlights Carve fences
+inside rendered documents.
