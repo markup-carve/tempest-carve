@@ -16,7 +16,7 @@ final readonly class CarveConfig
      * @param bool $sourceLines
      * @param \MarkupCarve\Carve\Renderer\SmartTypographyMode $smartTypography
      * @param \MarkupCarve\Carve\Renderer\SoftBreakMode $softBreakMode
-     * @param list<class-string<\MarkupCarve\Carve\Extension\ExtensionInterface>> $extensions
+     * @param list<class-string<\MarkupCarve\Carve\Extension\ExtensionInterface>|string|array<string, mixed>> $extensions Extension classes resolved from the container, extension names (`'autolink'`), or arrays with a `type` key and options
      * @param string $cacheKeySalt
      * @param string|null $cacheStore
      * @param \Tempest\DateTime\Duration|null $cacheExpiration

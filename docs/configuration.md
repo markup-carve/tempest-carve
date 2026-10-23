@@ -44,9 +44,34 @@ vocabulary while safe mode still sanitizes HTML output. A custom carve-php
 
 ## Extensions
 
-List extension class names in `extensions`. The Tempest container constructs
-each extension, so constructor dependencies may be injected. The same configured
-extensions apply to every output format.
+Each entry in `extensions` is one of:
+
+- an extension class name, which the Tempest container constructs, so
+  constructor dependencies may be injected;
+- an engine extension name in snake case, such as `'autolink'` or
+  `'lowercase_heading_ids'`;
+- an array with a `type` key and snake_case constructor options.
+
+```php
+return new CarveConfig(
+    extensions: [
+        HeadingNumbersExtension::class,
+        'autolink',
+        ['type' => 'wikilinks', 'url_template' => '/wiki/{page}', 'link_class' => 'wiki'],
+        'tempest_highlight',
+    ],
+);
+```
+
+`url_template` replaces `{page}` with the slug of the linked page name. An
+unknown name or option fails at boot rather than being ignored. `mermaid` and
+`plantuml` are shorthands for `fenced_render` with that language, and
+`tempest_highlight` enables the highlighter described in
+[Usage](usage.md#code-highlighting).
+
+Entries given by name or array are fingerprinted from the entry itself, so they
+work with the render cache without a `cacheKeySalt`. The same configured
+extensions apply to every output format and to `lint()`.
 
 ## Cache
 

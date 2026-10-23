@@ -22,11 +22,15 @@
     ],
     "require": {
         "php": "^8.5",
-        "markup-carve/carve-php": "^0.1.11",
+        "markup-carve/carve-php": "^0.1.14",
         "tempest/cache": "^3.19",
+        "tempest/console": "^3.19",
+        "tempest/mapper": "^3.19",
+        "tempest/validation": "^3.19",
         "tempest/view": "^3.19"
     },
     "require-dev": {
+        "markup-carve/tempest-highlight-carve": "^0.1.2",
         "php-collective/code-sniffer": "^0.6.8",
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5",
@@ -34,7 +38,9 @@
         "tempest/framework": "^3.19"
     },
     "suggest": {
-        "phpunit/phpunit": "Required to use the optional CarveAssertions testing trait."
+        "markup-carve/tempest-highlight-carve": "Highlights Carve fences when the tempest_highlight extension is enabled.",
+        "phpunit/phpunit": "Required to use the optional CarveAssertions testing trait.",
+        "tempest/highlight": "Required by the tempest_highlight extension that highlights fenced code."
     },
     "autoload": {
         "psr-4": {

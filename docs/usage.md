@@ -97,6 +97,100 @@ $result->suppressedWarnings;
 The dependency list contains canonical targets and resolution status, making it
 suitable for preview invalidation and build tooling.
 
+## Lint, format and import
+
+```php
+$warnings = $carve->lint($source);
+foreach ($warnings as $warning) {
+    echo "{$warning->line}:{$warning->column} {$warning->rule} {$warning->message}\n";
+}
+
+$warnings = $carve->lintIncluded($source, $path); // also lints included files
+$canonical = $carve->format($source, alignTables: true);
+$fromMarkdown = $carve->fromMarkdown($markdown);
+$fromHtml = $carve->fromHtml($html);
+```
+
+`lint()` runs every rule of the engine's `DocumentLinter` and passes the
+configured extensions on, so a fragment link to a heading id an extension
+produces is not reported as broken. `lintIncluded()` uses the configured
+include resolver unless one is passed; findings from an included file carry
+`file` and `includedBy`. `format()` returns the canonical source `carve fmt`
+prints, with table columns padded when `alignTables` is set.
+
+## Console commands
+
+| Command | Does |
+| --- | --- |
+| `carve:render <path> [--format=html\|text\|markdown\|ansi] [--renderer=name] [--output=file]` | Renders a file |
+| `carve:lint <path> [--include-root=dir]` | Lints a file or every `*.crv` below a directory; exits 1 on findings |
+| `carve:fmt <path> [--write\|--check] [--align-tables]` | Prints, rewrites or checks canonical form |
+| `carve:convert <path> [--from=markdown\|html] [--output=file]` | Converts Markdown or HTML to Carve; the format is guessed from the extension |
+
+Commands use the discovered `CarveRenderer`, so configured extensions apply.
+Tempest matches positional arguments by position, so put the path before the
+flags.
+
+## Validation
+
+`ValidCarve` is a Tempest validation rule:
+
+```php
+use MarkupCarve\Tempest\CarveProfile;
+use MarkupCarve\Tempest\Validation\ValidCarve;
+
+final class CommentRequest
+{
+    #[ValidCarve(profile: CarveProfile::Comment, lint: true, maxLength: 5000)]
+    public string $body;
+}
+```
+
+It fails on a parse error, on markup the profile does not allow, on parse
+warnings with `strict: true`, and on lint findings with `lint: true`. `null`
+and the empty string pass. `message` takes a template where `{error}` is
+replaced with the reason.
+
+## Model properties
+
+Type a property as `CarveContent` to store Carve source and read it back
+rendered:
+
+```php
+use MarkupCarve\Tempest\Mapper\CarveContent;
+
+final class Post
+{
+    public CarveContent $body;
+}
+```
+
+```html
+{!! $post->body !!}
+```
+
+The column holds the source string. `$post->body->source` is the stored
+markup, `$post->body->html()` renders it with the discovered renderer, and
+`$post->body->html('comment')` uses a named renderer. Rendering happens on
+first access and is memoized per renderer name. A plain string assigned to
+the property is cast on mapping.
+
+## Code highlighting
+
+The `tempest_highlight` extension highlights fenced code in HTML output with
+[tempest/highlight](https://github.com/tempestphp/highlight):
+
+```sh
+composer require tempest/highlight markup-carve/tempest-highlight-carve
+```
+
+With [tempest-highlight-carve](https://github.com/markup-carve/tempest-highlight-carve)
+installed, `carve` and `crv` fences are highlighted too. Fences in a language
+the highlighter does not know, and fences with attributes or a label, keep the
+default markup. Style the output with a tempest/highlight theme. Pass a
+configured `Highlighter` to `new TempestHighlightExtension($highlighter)` to
+add languages or change the theme.
+
 ## Test assertions
 
 PHPUnit test cases may use `MarkupCarve\Tempest\Testing\CarveAssertions` for
