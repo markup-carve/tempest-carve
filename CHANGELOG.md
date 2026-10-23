@@ -7,25 +7,27 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-23
+
 ### Added
 
 - `CarveRenderer::lint()` and `lintIncluded()` over the engine's
-  `DocumentLinter` and `IncludeLinter`, with the configured extensions.
+  `DocumentLinter` and `IncludeLinter`, with the configured extensions (#19).
 - `CarveRenderer::format()` with `alignTables`, and `fromMarkdown()` /
-  `fromHtml()` import.
+  `fromHtml()` import (#19).
 - Console commands `carve:render`, `carve:lint`, `carve:fmt` (with
-  `--align-tables`) and `carve:convert`.
-- `ValidCarve` validation rule.
-- `CarveContent` property type with a mapper caster and serializer.
+  `--align-tables`) and `carve:convert` (#19).
+- `ValidCarve` validation rule (#19).
+- `CarveContent` property type with a mapper caster and serializer (#19).
 - Extensions configured by name or as arrays with options, including a wiki-link
-  `url_template`.
+  `url_template` (#19).
 - `tempest_highlight` extension that highlights fenced code with
-  tempest/highlight and tempest-highlight-carve.
+  tempest/highlight and tempest-highlight-carve (#19).
 
 ### Changed
 
 - Require carve-php `^0.1.14`, up from `^0.1.11`, and `tempest/console`,
-  `tempest/mapper` and `tempest/validation`.
+  `tempest/mapper` and `tempest/validation` (#19).
 
 ## [0.1.1] - 2026-10-08
 ### Changed
