@@ -89,7 +89,7 @@ final class ValidCarveTest extends TestCase
         $content = $caster->cast('/x/');
 
         self::assertInstanceOf(CarveContent::class, $content);
-        self::assertSame("<p><em>x</em></p>\n", $content->html());
+        self::assertSame('<p><em>x</em></p>', $content->html());
         self::assertNull($caster->cast(null));
         self::assertSame($content, $caster->cast($content));
         self::assertSame('/x/', (new CarveSerializer())->serialize($content));

@@ -29,7 +29,7 @@ final class CarveRendererTest extends TestCase
         $html = CarveRenderer::safe()->render("# Heading\n\n/Emphasis/");
 
         self::assertSame(
-            "<section id=\"Heading\">\n  <h1>Heading</h1>\n  <p><em>Emphasis</em></p>\n</section>\n",
+            "<section id=\"Heading\">\n  <h1>Heading</h1>\n  <p><em>Emphasis</em></p>\n</section>",
             $html,
         );
     }

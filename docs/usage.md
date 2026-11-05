@@ -115,8 +115,11 @@ $fromHtml = $carve->fromHtml($html);
 configured extensions on, so a fragment link to a heading id an extension
 produces is not reported as broken. `lintIncluded()` uses the configured
 include resolver unless one is passed; findings from an included file carry
-`file` and `includedBy`. `format()` returns the canonical source `carve fmt`
-prints, with table columns padded when `alignTables` is set.
+`file` and `includedBy`. A `%% carve-lint-disable-next-line <rule>` comment
+silences one finding; `-disable-line`, `-disable` and `-enable` work the same
+way, and the suppressions apply to `carve:lint` and `ValidCarve` too.
+`format()` returns the canonical source `carve fmt` prints, with table columns
+padded when `alignTables` is set.
 
 ## Console commands
 
