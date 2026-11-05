@@ -63,7 +63,7 @@ final class ValidCarve implements Rule, HasErrorMessage
         $converter = new CarveConverter(warnings: true, profile: $this->profile?->create());
         try {
             $converter->parse($value);
-        } catch (ParseException | LengthException $exception) {
+        } catch (ParseException|LengthException $exception) {
             return $this->fail($exception->getMessage());
         }
         if ($converter->hasProfileViolations()) {
