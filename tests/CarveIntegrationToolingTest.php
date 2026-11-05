@@ -78,11 +78,14 @@ final class CarveIntegrationToolingTest extends IntegrationTestCase
     {
         $this->console->call('carve:fmt ' . $this->files . '/table.crv --align-tables')
             ->assertSuccess()
-            ->assertContains("| a   | bb |\n|---  |--- |\n| ccc | d  |");
-        $this->console->call('carve:fmt ' . $this->files . '/table.crv --check')->assertSuccess();
-        $this->console->call('carve:fmt ' . $this->files . '/table.crv --check --align-tables')
+            ->assertContains("|= a  |= bb |\n| ccc | d   |");
+        $this->console->call('carve:fmt ' . $this->files . '/table.crv --check')
             ->assertError()
             ->assertContains('table.crv is not formatted');
+        $this->console->call('carve:fmt ' . $this->files . '/native-table.crv --check')->assertSuccess();
+        $this->console->call('carve:fmt ' . $this->files . '/native-table.crv --check --align-tables')
+            ->assertError()
+            ->assertContains('native-table.crv is not formatted');
         $this->console->call('carve:fmt ' . $this->files . '/table.crv --check --write')->assertInvalid();
     }
 

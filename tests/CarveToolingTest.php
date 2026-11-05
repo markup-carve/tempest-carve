@@ -34,6 +34,15 @@ final class CarveToolingTest extends TestCase
     }
 
     #[Test]
+    public function testLintHonorsSuppressionComments(): void
+    {
+        $renderer = CarveRenderer::safe();
+
+        self::assertSame([], $renderer->lint("%% carve-lint-disable-next-line markdown-strong-double-star\n**bold**\n"));
+        self::assertSame(['markdown-strong-double-star'], self::rules($renderer->lint("%% carve-lint-disable-next-line heading-level-skip\n**bold**\n")));
+    }
+
+    #[Test]
     public function testLintDelegatesToTheEngineLinters(): void
     {
         $renderer = (string)file_get_contents((string)(new ReflectionClass(CarveRenderer::class))->getFileName());
@@ -90,8 +99,9 @@ final class CarveToolingTest extends TestCase
         $table = "| a | bb |\n|---|---|\n| ccc | d |\n";
 
         self::assertSame("# T\n\ntext\n", $renderer->format("# T\n\ntext  \n"));
-        self::assertSame($table, $renderer->format($table));
-        self::assertSame("| a   | bb |\n|---  |--- |\n| ccc | d  |\n", $renderer->format($table, alignTables: true));
+        self::assertSame("|= a |= bb |\n| ccc | d |\n", $renderer->format($table));
+        self::assertSame("|= a  |= bb |\n| ccc | d   |\n", $renderer->format($table, alignTables: true));
+        self::assertSame("a\n\n***\n\nb\n", $renderer->format("a\n\n---\n\nb\n"));
     }
 
     #[Test]
@@ -197,7 +207,7 @@ final class CarveToolingTest extends TestCase
     {
         $renderer = CarveRenderer::safe(extensions: [new TempestHighlightExtension()]);
 
-        self::assertSame("<pre><code class=\"language-nope\">x&lt;y\n</code></pre>\n", $renderer->render("``` nope\nx<y\n```\n"));
+        self::assertSame("<pre><code class=\"language-nope\">x&lt;y\n</code></pre>", $renderer->render("``` nope\nx<y\n```\n"));
         self::assertStringNotContainsString('hl-', $renderer->render("{#snippet}\n``` php\n\$a = 1;\n```\n"));
     }
 
