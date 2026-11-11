@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.5",
-        "markup-carve/carve-php": "dev-main as 0.1.17",
+        "markup-carve/carve-php": "^0.1.17",
         "tempest/cache": "^3.19",
         "tempest/console": "^3.19",
         "tempest/mapper": "^3.19",
@@ -42,12 +42,6 @@
         "phpunit/phpunit": "Required to use the optional CarveAssertions testing trait.",
         "tempest/highlight": "Required by the tempest_highlight extension that highlights fenced code."
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/markup-carve/carve-php"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "MarkupCarve\\Tempest\\": "src/"

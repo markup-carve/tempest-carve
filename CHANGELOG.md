@@ -7,6 +7,25 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-11
+
+### Changed
+
+- Require carve-php `^0.1.17`, up from `^0.1.14` (#22).
+- `render()`, `renderHtml()` and `CarveContent::html()` return HTML without a
+  final line feed, as the Carve HTML API specifies (#22).
+- `format()` and `carve:fmt` write `|=` header cells, `***` thematic breaks and
+  braced table alignment (`|={>}`); the old `|=>` spelling is still read and is
+  reported by the `deprecated-cell-alignment` lint rule (#22).
+- `lint()`, `carve:lint` and `ValidCarve` honor `%% carve-lint-disable-next-line`
+  and the other suppression comments (#22).
+
+### Removed
+
+- The lint rule alias `a11y/heading-jump`; use `heading-level-skip`.
+- `fromHtml()` and `carve:convert` no longer read `data-djot-*` attributes
+  (markup-carve/carve#5735).
+
 ## [0.1.2] - 2026-10-23
 
 ### Added
