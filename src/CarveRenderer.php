@@ -12,6 +12,7 @@ use MarkupCarve\Carve2\Carve2;
 use MarkupCarve\Carve2\Diagnostics\Diagnostic;
 use MarkupCarve\Carve2\Include\IncludeResolver;
 use MarkupCarve\Carve2\Output\WriterRegistry;
+use MarkupCarve\Carve2\RenderResult;
 use MarkupCarve\Tempest\Internal\OutputFormat;
 use Tempest\Cache\Cache;
 use Throwable;
@@ -155,8 +156,8 @@ final class CarveRenderer
             ],
             Carve2::includeDependencies($parsed->tree),
         ));
-        $render = fn (): string => Carve2::render($parsed->tree, $engineOptions);
-        $html = null;
+        $render = static fn (): RenderResult => Carve2::renderWithDiagnostics($parsed->tree, $engineOptions);
+        $renderResult = null;
         if ($this->cache !== null && $this->config->cacheEnabled && $this->includeResolver instanceof IncludeCacheKeyProvider) {
             $resolverKeyAfter = $this->includeResolver->includeCacheKey($dependencies);
             if ($resolverKeyBefore === $resolverKeyAfter) {
@@ -166,18 +167,21 @@ final class CarveRenderer
                 ], JSON_THROW_ON_ERROR);
                 $key = 'tempest-carve.include.' . hash('sha256', $context . "\0" . $source);
                 $cached = $this->cache->resolve($key, $render, $this->config->cacheExpiration);
-                if (is_string($cached)) {
-                    $html = $cached;
+                if ($cached instanceof RenderResult) {
+                    $renderResult = $cached;
                 } else {
                     $this->cache->remove($key);
                 }
             }
         }
-        $html ??= $render();
+        $renderResult ??= $render();
 
         return new IncludeRenderResult(
-            $html,
-            array_values(array_map(fn (Diagnostic $d): array => $this->diagnosticArray($d, $source, $includeSources), $parsed->diagnostics)),
+            $renderResult->html,
+            array_values(array_map(
+                fn (Diagnostic $d): array => $this->diagnosticArray($d, $source, $includeSources),
+                [...$parsed->diagnostics, ...$renderResult->diagnostics],
+            )),
             $dependencies,
             null,
         );

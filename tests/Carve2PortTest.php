@@ -78,6 +78,22 @@ final class Carve2PortTest extends TestCase
     }
 
     #[Test]
+    public function testIncludedRenderingReturnsRenderLossDiagnostics(): void
+    {
+        $resolver = new class implements IncludeResolver {
+            public function resolve(array $request): array
+            {
+                return $request['path'] === 'chapter'
+                    ? ['text' => '[x](javascript:alert(1))', 'id' => 'db:chapter']
+                    : ['error' => 'not_found'];
+            }
+        };
+        $result = CarveRenderer::safe(includeResolver: $resolver)->renderIncluded('{{ chapter }}');
+        self::assertSame('destination-denied', $result->warnings[0]['code']);
+        self::assertSame('render-loss', $result->warnings[0]['channel']);
+    }
+
+    #[Test]
     public function testLintFormatAndHtmlImportUseCarve2(): void
     {
         $renderer = CarveRenderer::safe();
