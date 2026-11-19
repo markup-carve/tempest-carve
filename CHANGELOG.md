@@ -7,6 +7,16 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Port Tempest rendering, includes, lint, formatting, HTML import, validation, and extensions to the pinned Carve2 engine on the `next2` branch.
+- Use Carve2 option names for profiles, heading ids, mode, smart typography, raw HTML, and URL policy.
+- Convert bundled Carve fixtures to canonical 0.2 syntax.
+
+### Pending
+
+- Markdown, text, and ANSI output methods need registered Carve2 writers. Markdown import and some 0.1 extensions await 0.2 engine support.
+
 ## [0.1.3] - 2026-11-12
 
 ### Changed

@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.5",
-        "markup-carve/carve-php": "^0.1.17",
+        "markup-carve/carve-php": "dev-next2#7f9681dfcbab44a4bf50b7fdd507027144abab05",
         "tempest/cache": "^3.19",
         "tempest/console": "^3.19",
         "tempest/mapper": "^3.19",
@@ -71,5 +71,11 @@
             "dealerdirect/phpcodesniffer-composer-installer": true
         },
         "sort-packages": true
-    }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/markup-carve/carve-php.git"
+        }
+    ]
 }

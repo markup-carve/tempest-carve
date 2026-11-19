@@ -36,21 +36,15 @@ updating the package when the application uses a discovery cache.
 
 ## Output formats
 
-`render()` and `renderHtml()` return safe HTML. The service also exposes
-Markdown, plain-text, and ANSI targets:
+`render()` and `renderHtml()` return safe HTML. The service retains `renderMarkdown()`, `renderPlainText()`, and `renderAnsi()` and the matching console choices. They use Carve2's writer registry. Until an application registers the corresponding `OutputWriter`, each call fails with a clear writer unavailable error. The view component always uses HTML.
+
+Register a writer in `CarveConfig::writers` when one is available:
 
 ```php
-$html = $carve->renderHtml($source);
-$markdown = $carve->renderMarkdown($source);
-$plainText = $carve->renderPlainText($source);
-$ansi = $carve->renderAnsi($source);
+return new CarveConfig(writers: [new App\Carve\TextWriter()]);
 ```
 
-The view component always uses HTML. Other formats are service APIs for uses
-such as search indexes, excerpts, mail pipelines, and console output.
-Only HTML is sanitized as HTML. Markdown escapes raw HTML, plain text omits it,
-and ANSI represents it as terminal text; callers must still treat every output
-according to its target format.
+The writer targets are `markdown`, `text`, and `ansi`. Carve2 ships `html` and `carve` by default.
 
 ## Diagnostics
 
@@ -77,49 +71,18 @@ the current source.
 
 ## Includes
 
-After configuring an include resolver, render a composed document with bounded
-expansion options:
-
-```php
-use MarkupCarve\Tempest\IncludeOptions;
-
-$result = $carve->renderIncluded(
-    $source,
-    new IncludeOptions(currentPath: 'articles/handbook.crv'),
-);
-
-$result->html;
-$result->warnings;
-$result->dependencies;
-$result->suppressedWarnings;
-```
-
-The dependency list contains canonical targets and resolution status, making it
-suitable for preview invalidation and build tooling.
+Configure a Carve2 `IncludeResolver` in `CarveConfig::includeResolver`, then call `renderIncluded()` with an optional `IncludeOptions` value. The result carries HTML, diagnostics, and dependencies. `suppressedWarnings` is currently null because Carve2 does not expose that count. Depth and byte limits may be narrowed; nondefault resolver-call and warning limits fail explicitly until the engine supplies them.
 
 ## Lint, format and import
 
 ```php
-$warnings = $carve->lint($source);
-foreach ($warnings as $warning) {
-    echo "{$warning->line}:{$warning->column} {$warning->rule} {$warning->message}\n";
-}
-
-$warnings = $carve->lintIncluded($source, $path); // also lints included files
+$findings = $carve->lint($source);
+$includedFindings = $carve->lintIncluded($source, $path);
 $canonical = $carve->format($source, alignTables: true);
-$fromMarkdown = $carve->fromMarkdown($markdown);
 $fromHtml = $carve->fromHtml($html);
 ```
 
-`lint()` runs every rule of the engine's `DocumentLinter` and passes the
-configured extensions on, so a fragment link to a heading id an extension
-produces is not reported as broken. `lintIncluded()` uses the configured
-include resolver unless one is passed; findings from an included file carry
-`file` and `includedBy`. A `%% carve-lint-disable-next-line <rule>` comment
-silences one finding; `-disable-line`, `-disable` and `-enable` work the same
-way, and the suppressions apply to `carve:lint` and `ValidCarve` too.
-`format()` returns the canonical source `carve fmt` prints, with table columns
-padded when `alignTables` is set.
+Each lint finding has `rule`, `message`, `file`, `line`, `column`, and the underlying Carve2 `diagnostic`. HTML import uses Carve2's importer. `fromMarkdown()` remains a public method and reports that the Markdown importer is not available yet.
 
 ## Console commands
 
@@ -128,7 +91,7 @@ padded when `alignTables` is set.
 | `carve:render <path> [--format=html\|text\|markdown\|ansi] [--renderer=name] [--output=file]` | Renders a file |
 | `carve:lint <path> [--include-root=dir]` | Lints a file or every `*.crv` below a directory; exits 1 on findings |
 | `carve:fmt <path> [--write\|--check] [--align-tables]` | Prints, rewrites or checks canonical form |
-| `carve:convert <path> [--from=markdown\|html] [--output=file]` | Converts Markdown or HTML to Carve; the format is guessed from the extension |
+| `carve:convert <path> [--from=markdown\|html] [--output=file]` | Converts HTML to Carve; Markdown reports an unavailable-importer error |
 
 Commands use the discovered `CarveRenderer`, so configured extensions apply.
 Tempest matches positional arguments by position, so put the path before the
@@ -149,8 +112,8 @@ final class CommentRequest
 }
 ```
 
-It fails on a parse error, on markup the profile does not allow, on parse
-warnings with `strict: true`, and on lint findings with `lint: true`. `null`
+It fails on invalid input, on markup the profile does not allow, on parse
+diagnostics with `strict: true`, and on lint findings with `lint: true`. `null`
 and the empty string pass. `message` takes a template where `{error}` is
 replaced with the reason.
 
