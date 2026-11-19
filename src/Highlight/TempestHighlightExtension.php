@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace MarkupCarve\Tempest\Highlight;
 
-use MarkupCarve\Carve2\Extension\Claim;
-use MarkupCarve\Carve2\Extension\ExtensionDefinition;
-use MarkupCarve\Carve2\Extension\ExtensionProvider;
-use MarkupCarve\Carve2\Extension\RenderHost;
-use MarkupCarve\Carve2\Node;
+use MarkupCarve\Carve\Extension\Claim;
+use MarkupCarve\Carve\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Extension\ExtensionProvider;
+use MarkupCarve\Carve\Extension\RenderHost;
+use MarkupCarve\Carve\Node;
 use MarkupCarve\TempestHighlight\CarveLanguage;
 use Tempest\Highlight\Highlighter;
 

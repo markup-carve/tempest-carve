@@ -18,7 +18,7 @@ return new CarveConfig(
     extensions: ['tempest_highlight', 'tabs'],
     cacheEnabled: true,
     cacheExpiration: Duration::hours(1),
-    cacheKeySalt: 'site-rendering-v2',
+    cacheKeySalt: 'site-rendering',
     namedRenderers: [
         'comments' => new CarveConfig(profile: CarveProfile::Comment),
     ],
@@ -40,12 +40,12 @@ $html = $carve->render($source, CarveProfile::Comment);
 
 ## Extensions
 
-`extensions` accepts Carve2 `ExtensionDefinition` and `ExtensionProvider` objects, or their container-resolvable class names. This adapter also supplies the names `tabs`, `mermaid`, `plantuml`, `fenced_render` with a `language` option, and `tempest_highlight`. The names `lowercase_heading_ids` and `ascii_heading_ids` moved to `headingIds`. Other 0.1 extension names are unavailable until Carve2 provides the corresponding 0.2 extension behavior. Unsupported names fail at startup instead of entering the 0.2 parser as 0.1 extensions.
+`extensions` accepts Carve `ExtensionDefinition` and `ExtensionProvider` objects, or their container-resolvable class names. This adapter also supplies the names `tabs`, `mermaid`, `plantuml`, `fenced_render` with a `language` option, and `tempest_highlight`. The names `lowercase_heading_ids` and `ascii_heading_ids` moved to `headingIds`. Other 0.1 extension names are unavailable until Carve provides the corresponding 0.2 extension behavior. Unsupported names fail at startup instead of entering the 0.2 parser as 0.1 extensions.
 
-`writers` accepts Carve2 `OutputWriter` instances. The engine ships `html` and `carve`. Register writers with the targets `text`, `markdown`, and `ansi` to activate the existing service methods and console choices. Without a registered writer, those methods report that the writer is not available yet.
+`writers` accepts Carve `OutputWriter` instances. The engine ships `html` and `carve`. Register writers with the targets `text`, `markdown`, and `ansi` to activate the existing service methods and console choices. Without a registered writer, those methods report that the writer is not available yet.
 
 ## Cache and includes
 
 Caching is off by default. A cache key covers source, target, profile, rendering policy, extensions, writers, and `cacheKeySalt`. A custom extension or writer with nonserializable state requires an explicit salt. Change the salt when its behavior changes.
 
-`includeResolver` is a container-resolvable Carve2 `IncludeResolver`. It receives a request with `path`, `from`, `options`, `section`, and `budget`, then returns `['text' => $source, 'id' => $stableId]` or `['error' => 'not_found']` and the other documented causes. The adapter also accepts the old resolver interface for migration, but all parsing and rendering use Carve2. Include output is cached only when the resolver also implements `IncludeCacheKeyProvider`. `IncludeOptions` can narrow depth and byte limits; Carve2 does not expose the old resolver-call and warning limits yet, and nondefault values fail explicitly.
+`includeResolver` is a container-resolvable Carve `IncludeResolver`. It receives a request with `path`, `from`, `options`, `section`, and `budget`, then returns `['text' => $source, 'id' => $stableId]` or `['error' => 'not_found']` and the other documented causes. All parsing and rendering use the 0.2 include resolver. Include output is cached only when the resolver also implements `IncludeCacheKeyProvider`. `IncludeOptions` can narrow depth and byte limits; Carve does not expose the old resolver-call and warning limits yet, and nondefault values fail explicitly.

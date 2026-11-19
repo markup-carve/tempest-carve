@@ -10,7 +10,7 @@ final readonly class IncludeRenderResult
      * @param string $html
      * @param list<array<string, mixed>> $warnings
      * @param list<array{target: string, resolved: bool}> $dependencies
-     * @param int|null $suppressedWarnings Null while Carve2 does not expose this count.
+     * @param int|null $suppressedWarnings Null while Carve does not expose this count.
      */
     public function __construct(
         public string $html,

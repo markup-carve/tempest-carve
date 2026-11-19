@@ -6,8 +6,8 @@ namespace MarkupCarve\Tempest\Validation;
 
 use Attribute;
 use InvalidArgumentException;
-use MarkupCarve\Carve2\Carve2;
-use MarkupCarve\Carve2\CarveException;
+use MarkupCarve\Carve\Carve;
+use MarkupCarve\Carve\CarveException;
 use MarkupCarve\Tempest\CarveProfile;
 use Tempest\Validation\HasErrorMessage;
 use Tempest\Validation\Rule;
@@ -42,7 +42,7 @@ final class ValidCarve implements Rule, HasErrorMessage
         }
 
         try {
-            $result = Carve2::renderWithDiagnostics($value, ['profile' => $this->profile === null ? 'full' : $this->profile->value]);
+            $result = Carve::renderWithDiagnostics($value, ['profile' => $this->profile === null ? 'full' : $this->profile->value]);
         } catch (CarveException $exception) {
             return $this->fail($exception->getMessage());
         }
@@ -55,7 +55,7 @@ final class ValidCarve implements Rule, HasErrorMessage
             }
         }
         if ($this->lint) {
-            $findings = Carve2::lint($value);
+            $findings = Carve::lint($value);
             if ($findings !== []) {
                 return $this->fail($findings[0]->message);
             }

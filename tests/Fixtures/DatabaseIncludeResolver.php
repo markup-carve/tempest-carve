@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Fixtures;
 
-use MarkupCarve\Carve\Transform\IncludeContext;
-use MarkupCarve\Carve\Transform\IncludeResolverInterface;
-use MarkupCarve\Carve\Transform\ResolvedInclude;
+use MarkupCarve\Carve\Include\IncludeResolver;
 use MarkupCarve\Tempest\IncludeCacheKeyProvider;
 
-final class DatabaseIncludeResolver implements IncludeResolverInterface, IncludeCacheKeyProvider
+final class DatabaseIncludeResolver implements IncludeResolver, IncludeCacheKeyProvider
 {
     /**
      * @param array<string, string> $documents
@@ -23,17 +21,18 @@ final class DatabaseIncludeResolver implements IncludeResolverInterface, Include
     ) {
     }
 
-    public function resolve(string $path, IncludeContext $context): ?ResolvedInclude
+    public function resolve(array $request): array
     {
         if ($this->changeVersionOnResolve) {
             $this->version = '2';
         }
 
+        $path = $request['path'];
         if (!isset($this->documents[$path])) {
-            return null;
+            return ['error' => 'not_found'];
         }
 
-        return new ResolvedInclude($this->documents[$path], 'db:' . $path);
+        return ['text' => $this->documents[$path], 'id' => 'db:' . $path];
     }
 
     public function includeCacheKey(array $dependencies): string

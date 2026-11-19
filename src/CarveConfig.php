@@ -9,8 +9,8 @@ use Tempest\DateTime\Duration;
 final readonly class CarveConfig
 {
     /**
-     * @param list<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider|string|array<string, mixed>> $extensions
-     * @param list<\MarkupCarve\Carve2\Output\OutputWriter> $writers
+     * @param list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider|string|array<string, mixed>> $extensions
+     * @param list<\MarkupCarve\Carve\Output\OutputWriter> $writers
      * @param string $cacheKeySalt
      * @param string|null $cacheStore
      * @param \Tempest\DateTime\Duration|null $cacheExpiration
@@ -24,7 +24,7 @@ final readonly class CarveConfig
      * @param bool $rawHtml
      * @param array<string, mixed> $urlPolicy
      * @param array<string, self> $namedRenderers
-     * @param class-string<\MarkupCarve\Carve2\Include\IncludeResolver|\MarkupCarve\Carve\Transform\IncludeResolverInterface>|null $includeResolver
+     * @param class-string<\MarkupCarve\Carve\Include\IncludeResolver>|null $includeResolver
      */
     public function __construct(
         public CarveProfile|string $profile = CarveProfile::Full,

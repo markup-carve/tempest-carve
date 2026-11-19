@@ -6,7 +6,7 @@ namespace MarkupCarve\Tempest\Console;
 
 use FilesystemIterator;
 use InvalidArgumentException;
-use MarkupCarve\Carve2\Include\FileResolver;
+use MarkupCarve\Carve\Include\FileResolver;
 use MarkupCarve\Tempest\CarveRenderer;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
