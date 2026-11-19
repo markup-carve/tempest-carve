@@ -17,6 +17,7 @@ final class CarveAssertionsTest extends TestCase
     {
         $this->assertCarveRenders('<strong>bold</strong>', '*bold*');
         $this->assertCarveIsSafe("```=html\n<script>x</script>\n```", '<script>x</script>');
-        $this->assertCarveHasWarning('reference', '[missing][nope]');
+        // C2-N-083 emits a parse diagnostic for a missing include resolver.
+        $this->assertCarveHasWarning('include', '{{ missing }}');
     }
 }

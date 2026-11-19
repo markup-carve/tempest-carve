@@ -4,22 +4,14 @@ declare(strict_types=1);
 
 namespace MarkupCarve\Tempest;
 
+use Closure;
 use InvalidArgumentException;
-use MarkupCarve\Carve\CarveConverter;
-use MarkupCarve\Carve\Converter\HtmlToCarve;
-use MarkupCarve\Carve\Converter\MarkdownToCarve;
-use MarkupCarve\Carve\Exception\ParseWarning;
-use MarkupCarve\Carve\Extension\ExtensionInterface;
-use MarkupCarve\Carve\Lint\DocumentLinter;
-use MarkupCarve\Carve\Lint\IncludeLinter;
-use MarkupCarve\Carve\Profile;
-use MarkupCarve\Carve\ProfileViolation;
-use MarkupCarve\Carve\Renderer\AnsiRenderer;
-use MarkupCarve\Carve\Renderer\MarkdownRenderer;
-use MarkupCarve\Carve\Renderer\PlainTextRenderer;
-use MarkupCarve\Carve\Transform\IncludeDependency;
-use MarkupCarve\Carve\Transform\IncludeExpander;
-use MarkupCarve\Carve\Transform\IncludeResolverInterface;
+use MarkupCarve\Carve\Transform\IncludeContext;
+use MarkupCarve\Carve\Transform\IncludeResolverInterface as LegacyIncludeResolver;
+use MarkupCarve\Carve2\Carve2;
+use MarkupCarve\Carve2\Diagnostics\Diagnostic;
+use MarkupCarve\Carve2\Include\IncludeResolver;
+use MarkupCarve\Carve2\Output\WriterRegistry;
 use MarkupCarve\Tempest\Internal\OutputFormat;
 use Tempest\Cache\Cache;
 use Throwable;
@@ -30,19 +22,12 @@ final class CarveRenderer
     /**
      * @var string
      */
-    private const CACHE_SCHEMA = '1';
+    private const CACHE_SCHEMA = '2';
 
     /**
-     * @var list<\MarkupCarve\Carve\Extension\ExtensionInterface>
+     * @var list<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider>
      */
     private array $extensions;
-
-    /**
-     * @var array<string, \MarkupCarve\Carve\CarveConverter>
-     */
-    private array $converters = [];
-
-    private readonly string $configurationFingerprint;
 
     /**
      * @var array<string, self>
@@ -54,68 +39,74 @@ final class CarveRenderer
      */
     private array $extensionKeys;
 
+    private readonly WriterRegistry $writers;
+
+    private readonly string $configurationFingerprint;
+
     /**
      * @param \MarkupCarve\Tempest\CarveConfig $config
      * @param \Tempest\Cache\Cache|null $cache
-     * @param iterable<\MarkupCarve\Carve\Extension\ExtensionInterface> $extensions
+     * @param iterable<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider> $extensions
      * @param array<string, self> $namedRenderers
-     * @param \MarkupCarve\Carve\Transform\IncludeResolverInterface|null $includeResolver
-     * @param array<int, string> $extensionKeys Cache fingerprints by extension position, for extensions built from config entries
+     * @param \MarkupCarve\Carve2\Include\IncludeResolver|\MarkupCarve\Carve\Transform\IncludeResolverInterface|null $includeResolver
+     * @param array<int, string> $extensionKeys
      */
     public function __construct(
         private readonly CarveConfig $config = new CarveConfig(),
         private readonly ?Cache $cache = null,
         iterable $extensions = [],
         array $namedRenderers = [],
-        private readonly ?IncludeResolverInterface $includeResolver = null,
+        private readonly IncludeResolver|LegacyIncludeResolver|null $includeResolver = null,
         array $extensionKeys = [],
     ) {
         $this->extensions = array_values([...$extensions]);
         $this->namedRenderers = $namedRenderers;
         $this->extensionKeys = $extensionKeys;
+        $this->writers = Carve2::writers();
+        foreach ($config->writers as $writer) {
+            $this->writers->register($writer);
+        }
         $this->configurationFingerprint = $this->configurationFingerprint();
     }
 
     /**
-     * Construct a safe-by-default renderer outside the Tempest container.
-     *
      * @param \MarkupCarve\Tempest\CarveConfig|null $config
      * @param \Tempest\Cache\Cache|null $cache
-     * @param iterable<\MarkupCarve\Carve\Extension\ExtensionInterface> $extensions
+     * @param iterable<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider> $extensions
      * @param array<string, self> $namedRenderers
-     * @param \MarkupCarve\Carve\Transform\IncludeResolverInterface|null $includeResolver
+     * @param \MarkupCarve\Carve2\Include\IncludeResolver|\MarkupCarve\Carve\Transform\IncludeResolverInterface|null $includeResolver
      */
     public static function safe(
         ?CarveConfig $config = null,
         ?Cache $cache = null,
         iterable $extensions = [],
         array $namedRenderers = [],
-        ?IncludeResolverInterface $includeResolver = null,
+        IncludeResolver|LegacyIncludeResolver|null $includeResolver = null,
     ): self {
         return new self($config ?? new CarveConfig(), $cache, $extensions, $namedRenderers, $includeResolver);
     }
 
-    public function render(string $source, CarveProfile|Profile|null $profile = null): string
+    public function render(string $source, CarveProfile|string|null $profile = null): string
     {
         return $this->renderHtml($source, $profile);
     }
 
-    public function renderHtml(string $source, CarveProfile|Profile|null $profile = null): string
+    public function renderHtml(string $source, CarveProfile|string|null $profile = null): string
     {
         return $this->renderOutput(OutputFormat::Html, $source, $profile);
     }
 
-    public function renderMarkdown(string $source, CarveProfile|Profile|null $profile = null): string
+    public function renderMarkdown(string $source, CarveProfile|string|null $profile = null): string
     {
         return $this->renderOutput(OutputFormat::Markdown, $source, $profile);
     }
 
-    public function renderPlainText(string $source, CarveProfile|Profile|null $profile = null): string
+    public function renderPlainText(string $source, CarveProfile|string|null $profile = null): string
     {
         return $this->renderOutput(OutputFormat::Plain, $source, $profile);
     }
 
-    public function renderAnsi(string $source, CarveProfile|Profile|null $profile = null): string
+    public function renderAnsi(string $source, CarveProfile|string|null $profile = null): string
     {
         return $this->renderOutput(OutputFormat::Ansi, $source, $profile);
     }
@@ -129,206 +120,176 @@ final class CarveRenderer
     public function renderIncluded(
         string $source,
         ?IncludeOptions $options = null,
-        CarveProfile|Profile|null $profile = null,
+        CarveProfile|string|null $profile = null,
     ): IncludeRenderResult {
         if ($this->includeResolver === null) {
             throw new InvalidArgumentException('No Carve include resolver is configured.');
         }
-
         $options ??= new IncludeOptions();
+        if ($options->resolverCallLimit !== 1000 || $options->warningLimit !== 100) {
+            throw new InvalidArgumentException('Carve2 does not expose include resolver-call or warning limits yet.');
+        }
         $resolverKeyBefore = $this->includeResolver instanceof IncludeCacheKeyProvider
             ? $this->includeResolver->includeCacheKey([])
             : null;
-        $resolvedProfile = $profile instanceof CarveProfile ? $profile->create() : $profile;
-        $converter = $this->createConverter(null, true, $resolvedProfile ?? $this->config->resolveProfile());
-        $converter->addExtensions($this->cloneExtensions());
-        $document = $converter->parse($source);
-        $expander = new IncludeExpander(
-            resolver: $this->includeResolver,
-            currentPath: $options->currentPath,
-            depthLimit: $options->depthLimit,
-            byteBudget: $options->byteBudget,
-            source: $source,
-            resolverCallLimit: $options->resolverCallLimit,
-            warningLimit: $options->warningLimit,
-            extensions: $converter->getExtensions(),
-        );
-        $expanded = $converter->transform($document, $expander);
-        $dependencies = array_map(
-            static fn (IncludeDependency $dependency): array => [
-                'target' => $dependency->getTarget(),
-                'resolved' => $dependency->isResolved(),
+        $includeSources = [];
+        $resolver = $this->capturingResolver($this->resolver($this->includeResolver), $includeSources);
+        $engineOptions = $this->options($profile);
+        $engineOptions['includes'] = [
+            'resolver' => $resolver,
+            'file' => $options->currentPath,
+            'depth' => $options->depthLimit,
+        ];
+        if ($options->byteBudget !== null) {
+            $engineOptions['includes']['bytes'] = $options->byteBudget;
+        }
+        $parsed = Carve2::parseWithDiagnostics($source, [
+            'extensions' => $this->extensions,
+            'headingIds' => $this->config->headingIds,
+            'includes' => $engineOptions['includes'],
+        ]);
+        $dependencies = array_values(array_map(
+            static fn (array $entry): array => [
+                'target' => $entry['file'] ?? $entry['path'],
+                'resolved' => $entry['read'],
             ],
-            $expander->getDependencies(),
-        );
-        $render = fn (): string => $converter->render($expanded);
+            Carve2::includeDependencies($parsed->tree),
+        ));
+        $render = fn (): string => Carve2::render($parsed->tree, $engineOptions);
         $html = null;
         if ($this->cache !== null && $this->config->cacheEnabled && $this->includeResolver instanceof IncludeCacheKeyProvider) {
             $resolverKeyAfter = $this->includeResolver->includeCacheKey($dependencies);
-            if ($resolverKeyBefore !== $resolverKeyAfter) {
-                return new IncludeRenderResult(
-                    html: $render(),
-                    warnings: $this->includeWarnings($converter, $expander),
-                    dependencies: $dependencies,
-                    suppressedWarnings: $expander->getSuppressedWarnings(),
-                );
-            }
-            $cacheContext = json_encode([
-                'schema' => self::CACHE_SCHEMA,
-                'carve' => CarveConverter::LIB_VERSION,
-                'configuration' => $this->configurationFingerprint,
-                'profileOverride' => $profile === null ? null : ($profile instanceof CarveProfile ? $profile->value : $this->objectFingerprint($profile)),
-                'resolver' => $this->includeResolver::class,
-                'resolverKey' => $resolverKeyAfter,
-                'dependencies' => $dependencies,
-                'options' => [
-                    'currentPath' => $options->currentPath,
-                    'depthLimit' => $options->depthLimit,
-                    'byteBudget' => $options->byteBudget,
-                    'resolverCallLimit' => $options->resolverCallLimit,
-                    'warningLimit' => $options->warningLimit,
-                ],
-            ], JSON_THROW_ON_ERROR);
-            $key = 'tempest-carve.include.' . hash('sha256', $cacheContext . "\0" . $source);
-            $cached = $this->cache->resolve($key, $render, $this->config->cacheExpiration);
-            if (is_string($cached)) {
-                $html = $cached;
-            } else {
-                $this->cache->remove($key);
+            if ($resolverKeyBefore === $resolverKeyAfter) {
+                $context = json_encode([
+                    self::CACHE_SCHEMA, $this->configurationFingerprint, $resolverKeyAfter,
+                    $dependencies, $options, $profile instanceof CarveProfile ? $profile->value : $profile,
+                ], JSON_THROW_ON_ERROR);
+                $key = 'tempest-carve.include.' . hash('sha256', $context . "\0" . $source);
+                $cached = $this->cache->resolve($key, $render, $this->config->cacheExpiration);
+                if (is_string($cached)) {
+                    $html = $cached;
+                } else {
+                    $this->cache->remove($key);
+                }
             }
         }
         $html ??= $render();
 
         return new IncludeRenderResult(
-            html: $html,
-            warnings: $this->includeWarnings($converter, $expander),
-            dependencies: $dependencies,
-            suppressedWarnings: $expander->getSuppressedWarnings(),
+            $html,
+            array_values(array_map(fn (Diagnostic $d): array => $this->diagnosticArray($d, $source, $includeSources), $parsed->diagnostics)),
+            $dependencies,
+            null,
         );
-    }
-
-    /**
-     * @return list<array{message: string, line: int, column: int, category: string|null, suggestion: string|null, file?: string|null, detail?: string|null, rule?: string|null}>
-     */
-    private function includeWarnings(CarveConverter $converter, IncludeExpander $expander): array
-    {
-        return array_values(array_map(
-            static fn (ParseWarning $warning): array => $warning->toArray(),
-            [...$converter->getWarnings(), ...$expander->getWarnings()],
-        ));
     }
 
     public function renderWithReport(
         string $source,
         bool $strictLosses = false,
         int $maxRenderLosses = 100,
-        CarveProfile|Profile|null $profile = null,
+        CarveProfile|string|null $profile = null,
     ): RenderReport {
-        $resolvedProfile = $profile instanceof CarveProfile ? $profile->create() : $profile;
-        $converter = $profile === null
-            ? $this->converter(OutputFormat::Report)
-            : $this->converter(OutputFormat::Report, $resolvedProfile);
-        $converter->clearWarnings();
-        $result = $converter->convertWithReport($source, $strictLosses, $maxRenderLosses);
+        $options = $this->options($profile);
+        $result = Carve2::renderWithDiagnostics($source, $options);
+        $parse = [];
+        $losses = [];
+        foreach ($result->diagnostics as $diagnostic) {
+            $row = $this->diagnosticArray($diagnostic, $source);
+            if ($diagnostic->channel === 'render-loss') {
+                $losses[] = $row;
+            } else {
+                $parse[] = $row;
+            }
+        }
+        if ($strictLosses && $losses !== []) {
+            Carve2::render($source, $options + ['strictLosses' => true]);
+        }
 
         return new RenderReport(
-            html: $result->value,
-            warnings: array_values(array_map(
-                static fn (ParseWarning $warning): array => $warning->toArray(),
-                $converter->getWarnings(),
-            )),
-            profileViolations: array_values(array_map(
-                static fn (ProfileViolation $violation): array => [
-                    'nodeType' => $violation->nodeType,
-                    'reason' => $violation->reason,
-                    'reasonDescription' => $violation->reasonDescription,
-                ],
-                $converter->getProfileViolations(),
-            )),
-            losses: $result->losses,
-            totalLosses: $result->totalLosses,
-            lossesTruncated: $result->truncated,
+            $result->html,
+            $parse,
+            array_values(array_filter($losses, static fn (array $row): bool => is_string($row['code'] ?? null) && str_starts_with($row['code'], 'profile-'))),
+            array_slice($losses, 0, max(0, $maxRenderLosses)),
+            count($losses),
+            count($losses) > $maxRenderLosses,
         );
     }
 
     /**
-     * Lint Carve source with every rule of the engine's document linter.
-     *
-     * The configured extensions are passed on, so references to targets an
-     * extension defines are not reported as unresolved.
-     *
-     * @return list<\MarkupCarve\Carve\Lint\LintWarning>
+     * @return list<\MarkupCarve\Tempest\LintFinding>
      */
     public function lint(string $source): array
     {
-        return (new DocumentLinter())->lint($source, ['extensions' => $this->cloneExtensions()]);
+        return $this->lintFindings(Carve2::lint($source, [
+            'extensions' => $this->extensions,
+        ]), $source);
     }
 
     /**
-     * Lint Carve source and every file its include directives pull in.
-     *
-     * Findings from an included file carry `file` and `includedBy`.
-     *
      * @param string $source
      * @param string|null $sourcePath
-     * @param \MarkupCarve\Carve\Transform\IncludeResolverInterface|null $resolver Defaults to the configured include resolver
+     * @param \MarkupCarve\Carve2\Include\IncludeResolver|\MarkupCarve\Carve\Transform\IncludeResolverInterface|null $resolver
      *
      * @throws \InvalidArgumentException
      *
-     * @return list<\MarkupCarve\Carve\Lint\LintWarning>
+     * @return list<\MarkupCarve\Tempest\LintFinding>
      */
-    public function lintIncluded(string $source, ?string $sourcePath = null, ?IncludeResolverInterface $resolver = null): array
-    {
+    public function lintIncluded(
+        string $source,
+        ?string $sourcePath = null,
+        IncludeResolver|LegacyIncludeResolver|null $resolver = null,
+    ): array {
         $resolver ??= $this->includeResolver
             ?? throw new InvalidArgumentException('No Carve include resolver is configured.');
+        $includeSources = [];
+        $options = [
+            'extensions' => $this->extensions,
+            'includes' => ['resolver' => $this->capturingResolver($this->resolver($resolver), $includeSources), 'file' => $sourcePath],
+        ];
 
-        return (new IncludeLinter())->lint(
-            $source,
-            ['extensions' => $this->cloneExtensions()],
-            $resolver,
-            $sourcePath,
-        );
+        return $this->lintFindings(Carve2::lint($source, $options), $source, $includeSources);
     }
 
-    /**
-     * Canonical Carve source, as `carve fmt` prints it.
-     */
     public function format(string $source, bool $alignTables = false): string
     {
-        return CarveConverter::toCarve($source, $alignTables);
+        return Carve2::format($source, ['alignTables' => $alignTables, 'extensions' => $this->extensions]);
     }
 
     public function fromMarkdown(string $source): string
     {
-        return (new MarkdownToCarve())->convert($source);
+        throw new InvalidArgumentException('Markdown importer not available yet in Carve2.');
     }
 
     public function fromHtml(string $source): string
     {
-        return (new HtmlToCarve())->convert($source);
+        return Carve2::importDocument($source, ['from' => 'html'])->source;
     }
 
-    private function renderOutput(OutputFormat $output, string $source, CarveProfile|Profile|null $profile = null): string
+    private function renderOutput(OutputFormat $output, string $source, CarveProfile|string|null $profile): string
     {
-        $resolvedProfile = $profile instanceof CarveProfile ? $profile->create() : $profile;
-        $converter = $profile === null ? $this->converter($output) : $this->converter($output, $resolvedProfile);
-        $render = fn (): string => $converter->convert($source);
+        $render = function () use ($output, $source, $profile): string {
+            $options = $this->options($profile);
+            if ($output === OutputFormat::Html) {
+                return Carve2::render($source, $options);
+            }
+            $target = $output === OutputFormat::Plain ? 'text' : $output->value;
+            if (!$this->writers->has($target)) {
+                throw new InvalidArgumentException(sprintf('%s writer not available yet in Carve2.', ucfirst($target)));
+            }
 
+            return Carve2::writeTo($target, Carve2::parse($source, [
+                'extensions' => $this->extensions,
+                'headingIds' => $this->config->headingIds,
+            ]), $options, $this->writers);
+        };
         if (!$this->config->cacheEnabled || $this->cache === null) {
             return $render();
         }
-
         $key = $this->cacheKey($output, $source, $profile);
-        $value = $this->cache->resolve(
-            $key,
-            $render,
-            $this->config->cacheExpiration,
-        );
-
+        $value = $this->cache->resolve($key, $render, $this->config->cacheExpiration);
         if (is_string($value)) {
             return $value;
         }
-
         $this->cache->remove($key);
         $value = $this->cache->resolve($key, $render, $this->config->cacheExpiration);
         if (!is_string($value)) {
@@ -338,62 +299,151 @@ final class CarveRenderer
         return $value;
     }
 
-    private function converter(OutputFormat $output, ?Profile $profile = null): CarveConverter
+    /**
+     * @return array<string, mixed>
+     */
+    private function options(CarveProfile|string|null $profile): array
     {
-        $key = $output->value . ':' . ($profile === null ? 'configured' : $this->objectFingerprint($profile));
-        if (isset($this->converters[$key])) {
-            return $this->converters[$key];
+        $options = [
+            'profile' => $profile instanceof CarveProfile ? $profile->value : ($profile ?? $this->config->profileName()),
+            'smartTypography' => $this->config->smartTypography,
+            'sourceLines' => $this->config->sourceLines,
+            'headingIds' => $this->config->headingIds,
+            'mode' => $this->config->mode,
+            'sections' => $this->config->sections,
+            'rawHtml' => $this->config->rawHtml,
+            'extensions' => $this->extensions,
+        ];
+        if ($this->config->urlPolicy !== []) {
+            $options['urlPolicy'] = $this->config->urlPolicy;
         }
 
-        $renderer = match ($output) {
-            OutputFormat::Html, OutputFormat::Report => null,
-            OutputFormat::Markdown => new MarkdownRenderer(),
-            OutputFormat::Plain => new PlainTextRenderer(),
-            OutputFormat::Ansi => new AnsiRenderer(),
+        return $options;
+    }
+
+    private function resolver(IncludeResolver|LegacyIncludeResolver $resolver): IncludeResolver
+    {
+        if ($resolver instanceof IncludeResolver) {
+            return $resolver;
+        }
+
+        return new class ($resolver) implements IncludeResolver {
+            public function __construct(private readonly LegacyIncludeResolver $legacy)
+            {
+            }
+
+            public function resolve(array $request): array
+            {
+                $found = $this->legacy->resolve(
+                    $request['path'],
+                    new IncludeContext($request['from'] ?? null, $request['from'] ?? null),
+                );
+
+                if ($found === null) {
+                    return ['error' => 'not_found'];
+                }
+
+                return is_string($found)
+                    ? ['text' => $found, 'id' => $request['path']]
+                    : ['text' => $found->getSource(), 'id' => $found->getId() ?? $request['path']];
+            }
+        };
+    }
+
+    /**
+     * @param \MarkupCarve\Carve2\Include\IncludeResolver $resolver
+     * @param array<string, string> $sources
+     */
+    private function capturingResolver(IncludeResolver $resolver, array &$sources): IncludeResolver
+    {
+        $capture = static function (string $id, string $text) use (&$sources): void {
+            $sources[$id] = $text;
         };
 
-        $converter = $this->createConverter($renderer, $output === OutputFormat::Report, $profile ?? $this->config->resolveProfile());
-        $converter->addExtensions($this->cloneExtensions());
-        $this->converters[$key] = $converter;
+        return new class ($resolver, $capture) implements IncludeResolver {
+            public function __construct(private readonly IncludeResolver $resolver, private readonly Closure $capture)
+            {
+            }
 
-        return $converter;
+            public function resolve(array $request): array
+            {
+                $result = $this->resolver->resolve($request);
+                if (is_string($result['id'] ?? null) && is_string($result['text'] ?? null)) {
+                    ($this->capture)($result['id'], $result['text']);
+                }
+
+                return $result;
+            }
+        };
     }
 
-    private function createConverter(
-        MarkdownRenderer|PlainTextRenderer|AnsiRenderer|null $renderer,
-        bool $warnings,
-        ?Profile $profile,
-    ): CarveConverter {
-        if ($renderer === null) {
-            return new CarveConverter(
-                warnings: $warnings,
-                safeMode: true,
-                profile: $profile,
-                softBreakMode: $this->config->softBreakMode,
-                smartTypography: $this->config->smartTypography,
-                sourceLines: $this->config->sourceLines,
-            );
+    /**
+     * @param array<\MarkupCarve\Carve2\Diagnostics\Diagnostic> $diagnostics
+     * @param string $source
+     * @param array<string, string> $sources
+     *
+     * @return list<\MarkupCarve\Tempest\LintFinding>
+     */
+    private function lintFindings(array $diagnostics, string $source, array $sources = []): array
+    {
+        return array_values(array_map(function (Diagnostic $d) use ($source, $sources): LintFinding {
+            $position = $this->position($d->file === null ? $source : ($sources[$d->file] ?? $source), $d->startOffset);
+
+            return new LintFinding($d->code, $d->message, $d->file, $position[0], $position[1], $d);
+        }, $diagnostics));
+    }
+
+    /**
+     * @param \MarkupCarve\Carve2\Diagnostics\Diagnostic $diagnostic
+     * @param string $source
+     * @param array<string, string> $sources
+     *
+     * @return array<string, mixed>
+     */
+    private function diagnosticArray(Diagnostic $diagnostic, string $source, array $sources = []): array
+    {
+        [$line, $column] = $this->position(
+            $diagnostic->file === null ? $source : ($sources[$diagnostic->file] ?? $source),
+            $diagnostic->startOffset,
+        );
+        $nodeType = null;
+        if ($diagnostic->code === 'destination-denied') {
+            $nodeType = 'inline';
+        } elseif (
+            $diagnostic->code === 'profile-construct-degraded'
+            && preg_match('/: ([a-z_]+)\.$/', $diagnostic->message, $match) === 1
+        ) {
+            $nodeType = $match[1];
         }
 
-        $renderer->setSoftBreakMode($this->config->softBreakMode);
-
-        return new CarveConverter(
-            warnings: $warnings,
-            profile: $profile,
-            smartTypography: $this->config->smartTypography,
-            renderer: $renderer,
-            sourceLines: $this->config->sourceLines,
-        );
+        return $diagnostic->toArray() + [
+            'category' => str_starts_with($diagnostic->code, 'include-') ? 'include' : 'reference',
+            'line' => $line,
+            'column' => $column,
+            'nodeType' => $nodeType,
+        ];
     }
 
-    private function cacheKey(OutputFormat $output, string $source, CarveProfile|Profile|null $profile = null): string
+    /**
+     * @return array{int, int}
+     */
+    private function position(string $source, int $offset): array
+    {
+        if ($offset < 0) {
+            return [1, 1];
+        }
+        $prefix = substr($source, 0, $offset);
+        $line = substr_count($prefix, "\n") + 1;
+        $last = strrpos($prefix, "\n");
+
+        return [$line, $offset - ($last === false ? -1 : $last)];
+    }
+
+    private function cacheKey(OutputFormat $output, string $source, CarveProfile|string|null $profile): string
     {
         $configuration = json_encode([
-            'schema' => self::CACHE_SCHEMA,
-            'carve' => CarveConverter::LIB_VERSION,
-            'output' => $output->value,
-            'configuration' => $this->configurationFingerprint,
-            'profileOverride' => $profile === null ? null : ($profile instanceof CarveProfile ? $profile->value : $this->objectFingerprint($profile)),
+            self::CACHE_SCHEMA, $output->value, $this->configurationFingerprint,
+            $profile instanceof CarveProfile ? $profile->value : $profile,
         ], JSON_THROW_ON_ERROR);
 
         return 'tempest-carve.' . hash('sha256', $configuration . "\0" . $source);
@@ -401,22 +451,19 @@ final class CarveRenderer
 
     private function configurationFingerprint(): string
     {
-        $profile = $this->config->profile;
-        $profileKey = $profile instanceof CarveProfile
-            ? $profile->value
-            : ($profile === null ? 'none' : $this->objectFingerprint($profile));
         $extensions = [];
         foreach ($this->extensions as $index => $extension) {
             $extensions[] = $this->extensionKeys[$index] ?? $this->objectFingerprint($extension);
         }
-
+        $writers = [];
+        foreach ($this->config->writers as $writer) {
+            $writers[] = $this->objectFingerprint($writer);
+        }
         $configuration = json_encode([
-            'profile' => $profileKey,
-            'softBreakMode' => $this->config->softBreakMode->value,
-            'smartTypography' => $this->config->smartTypography->value,
-            'sourceLines' => $this->config->sourceLines,
-            'extensions' => $extensions,
-            'salt' => $this->config->cacheKeySalt,
+            $this->config->profileName(), $this->config->smartTypography, $this->config->sourceLines,
+            $this->config->headingIds, $this->config->mode, $this->config->sections,
+            $this->config->rawHtml, $this->config->urlPolicy, $extensions, $writers,
+            $this->config->cacheKeySalt,
         ], JSON_THROW_ON_ERROR);
 
         return hash('sha256', $configuration);
@@ -436,16 +483,5 @@ final class CarveRenderer
 
             return $object::class;
         }
-    }
-
-    /**
-     * @return list<\MarkupCarve\Carve\Extension\ExtensionInterface>
-     */
-    private function cloneExtensions(): array
-    {
-        return array_map(
-            static fn (ExtensionInterface $extension): ExtensionInterface => clone $extension,
-            $this->extensions,
-        );
     }
 }

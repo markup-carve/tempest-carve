@@ -4,32 +4,39 @@ declare(strict_types=1);
 
 namespace MarkupCarve\Tempest;
 
-use MarkupCarve\Carve\Profile;
-use MarkupCarve\Carve\Renderer\SmartTypographyMode;
-use MarkupCarve\Carve\Renderer\SoftBreakMode;
 use Tempest\DateTime\Duration;
 
 final readonly class CarveConfig
 {
     /**
-     * @param \MarkupCarve\Tempest\CarveProfile|\MarkupCarve\Carve\Profile|null $profile
-     * @param bool $sourceLines
-     * @param \MarkupCarve\Carve\Renderer\SmartTypographyMode $smartTypography
-     * @param \MarkupCarve\Carve\Renderer\SoftBreakMode $softBreakMode
-     * @param list<class-string<\MarkupCarve\Carve\Extension\ExtensionInterface>|string|array<string, mixed>> $extensions Extension classes resolved from the container, extension names (`'autolink'`), or arrays with a `type` key and options
+     * @param list<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider|string|array<string, mixed>> $extensions
+     * @param list<\MarkupCarve\Carve2\Output\OutputWriter> $writers
      * @param string $cacheKeySalt
      * @param string|null $cacheStore
      * @param \Tempest\DateTime\Duration|null $cacheExpiration
      * @param bool $cacheEnabled
+     * @param \MarkupCarve\Tempest\CarveProfile|string $profile
+     * @param bool $smartTypography
+     * @param bool $sourceLines
+     * @param string $headingIds
+     * @param string $mode
+     * @param bool $sections
+     * @param bool $rawHtml
+     * @param array<string, mixed> $urlPolicy
      * @param array<string, self> $namedRenderers
-     * @param class-string<\MarkupCarve\Carve\Transform\IncludeResolverInterface>|null $includeResolver
+     * @param class-string<\MarkupCarve\Carve2\Include\IncludeResolver|\MarkupCarve\Carve\Transform\IncludeResolverInterface>|null $includeResolver
      */
     public function __construct(
-        public CarveProfile|Profile|null $profile = null,
-        public SoftBreakMode $softBreakMode = SoftBreakMode::Newline,
-        public SmartTypographyMode $smartTypography = SmartTypographyMode::Glyph,
+        public CarveProfile|string $profile = CarveProfile::Full,
+        public bool $smartTypography = true,
         public bool $sourceLines = false,
+        public string $headingIds = 'keep-case',
+        public string $mode = 'interactive',
+        public bool $sections = true,
+        public bool $rawHtml = false,
+        public array $urlPolicy = [],
         public array $extensions = [],
+        public array $writers = [],
         public bool $cacheEnabled = false,
         public ?Duration $cacheExpiration = null,
         public ?string $cacheStore = null,
@@ -39,10 +46,8 @@ final readonly class CarveConfig
     ) {
     }
 
-    public function resolveProfile(): ?Profile
+    public function profileName(): string
     {
-        return $this->profile instanceof CarveProfile
-            ? $this->profile->create()
-            : $this->profile;
+        return $this->profile instanceof CarveProfile ? $this->profile->value : $this->profile;
     }
 }

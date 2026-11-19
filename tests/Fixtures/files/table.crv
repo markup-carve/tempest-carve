@@ -1,5 +1,4 @@
-# Title
+= Title
 
-| a | bb |
-|---|---|
+|= a |= bb |
 | ccc | d |

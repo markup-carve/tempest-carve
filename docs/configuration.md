@@ -1,33 +1,24 @@
 # Configuration
 
-The package discovers this safe default configuration:
+The package discovers `CarveConfig` automatically. Create `config/carve.config.php` in the application to override it:
 
 ```php
-use MarkupCarve\Tempest\CarveConfig;
-
-return new CarveConfig();
-```
-
-Create `config/carve.config.php` in the application to override it. Safe HTML
-rendering remains enabled regardless of these options:
-
-```php
-use MarkupCarve\Carve\Extension\HeadingNumbersExtension;
-use MarkupCarve\Carve\Renderer\SmartTypographyMode;
-use MarkupCarve\Carve\Renderer\SoftBreakMode;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveProfile;
 use Tempest\DateTime\Duration;
 
 return new CarveConfig(
     profile: CarveProfile::Article,
-    softBreakMode: SoftBreakMode::Space,
-    smartTypography: SmartTypographyMode::Glyph,
+    smartTypography: true,
     sourceLines: false,
-    extensions: [HeadingNumbersExtension::class],
+    headingIds: 'lower',
+    mode: 'interactive',
+    sections: true,
+    rawHtml: false,
+    extensions: ['tempest_highlight', 'tabs'],
     cacheEnabled: true,
     cacheExpiration: Duration::hours(1),
-    cacheKeySalt: 'site-rendering-v1',
+    cacheKeySalt: 'site-rendering-v2',
     namedRenderers: [
         'comments' => new CarveConfig(profile: CarveProfile::Comment),
     ],
@@ -35,91 +26,26 @@ return new CarveConfig(
 );
 ```
 
-## Profiles
+## Rendering policy
 
-`CarveProfile` exposes the four carve-php presets: `Full`, `Article`,
-`Comment`, and `Minimal`. The default `null` profile allows the full Carve
-vocabulary while safe mode still sanitizes HTML output. A custom carve-php
-`Profile` instance may be supplied when a preset is not sufficient.
+The default profile is `full`. `CarveProfile` offers `Full`, `Article`, `Comment`, and `Minimal`; a matching string is also accepted. Profiles constrain rendered content, while `rawHtml: false` and the engine's default `urlPolicy` keep the secure HTML policy. Set `rawHtml: true` only for trusted source. Pass a custom `urlPolicy` map when the default scheme policy is unsuitable. The engine validates the map.
 
-## Extensions
+`headingIds` accepts `off`, `keep-case`, `lower`, `ascii`, `ascii-lower`, `ascii-strict`, or `ascii-strict-lower`. `mode` accepts `interactive` or `static`. `sections` controls heading sections, `smartTypography` is a boolean, and `sourceLines` adds source line attributes. Carve 0.2 has no `softBreakMode` option; line breaks follow the 0.2 grammar.
 
-Each entry in `extensions` is one of:
-
-- an extension class name, which the Tempest container constructs, so
-  constructor dependencies may be injected;
-- an engine extension name in snake case, such as `'autolink'` or
-  `'lowercase_heading_ids'`;
-- an array with a `type` key and snake_case constructor options.
-
-```php
-return new CarveConfig(
-    extensions: [
-        HeadingNumbersExtension::class,
-        'autolink',
-        ['type' => 'wikilinks', 'url_template' => '/wiki/{page}', 'link_class' => 'wiki'],
-        'tempest_highlight',
-    ],
-);
-```
-
-`url_template` replaces `{page}` with the slug of the linked page name. An
-unknown name or option fails at boot rather than being ignored. `mermaid` and
-`plantuml` are shorthands for `fenced_render` with that language, and
-`tempest_highlight` enables the highlighter described in
-[Usage](usage.md#code-highlighting).
-
-Entries given by name or array are fingerprinted from the entry itself, so they
-work with the render cache without a `cacheKeySalt`. The same configured
-extensions apply to every output format and to `lint()`.
-
-## Cache
-
-Caching is disabled by default. When enabled, the configured Tempest cache
-stores each deterministic output by source content, output format, rendering
-configuration, extension classes, and carve-php version. Set `cacheStore` to a
-tagged Tempest cache name when the default project cache is not appropriate.
-The cache fingerprint includes serializable profile and extension state. Set
-`cacheKeySalt`, and change it when behavior changes, for custom profiles or
-extensions containing non-serializable state such as closures. Cached rendering
-rejects such state when no salt is configured instead of risking collisions.
-
-Diagnostic reports bypass the cache so their warnings, profile violations, and
-loss positions always describe the current source.
-
-## Source lines
-
-Set `sourceLines` to `true` to add 1-based `data-source-line` attributes to
-rendered block elements. This is intended for editor preview synchronization
-and is off by default to keep normal HTML output unchanged.
-
-## Named renderers
-
-Use `namedRenderers` when one application publishes distinct kinds of content.
-Each entry has its own profile, extensions, cache store, and include resolver:
-
-```php
-$html = $carve->named('comments')->render($comment->body);
-```
-
-For a one-off policy change, render and report methods also accept a profile:
+A one-off profile can be passed to `render()`, `renderHtml()`, or `renderWithReport()`:
 
 ```php
 $html = $carve->render($source, CarveProfile::Comment);
 ```
 
-## Includes
+## Extensions
 
-Set `includeResolver` to a container-resolvable implementation of carve-php's
-`IncludeResolverInterface`. This keeps storage decisions in the application;
-resolvers may use a contained filesystem root, database records, or another
-trusted source. Call `renderIncluded()` to receive HTML together with include
-warnings, dependencies, and the suppressed-warning count.
+`extensions` accepts Carve2 `ExtensionDefinition` and `ExtensionProvider` objects, or their container-resolvable class names. This adapter also supplies the names `tabs`, `mermaid`, `plantuml`, `fenced_render` with a `language` option, and `tempest_highlight`. The names `lowercase_heading_ids` and `ascii_heading_ids` moved to `headingIds`. Other 0.1 extension names are unavailable until Carve2 provides the corresponding 0.2 extension behavior. Unsupported names fail at startup instead of entering the 0.2 parser as 0.1 extensions.
 
-Include output is cached only when the resolver also implements
-`IncludeCacheKeyProvider`. Its key must identify the resolver's scope and change
-whenever any content reachable through it changes. Resolvers without that
-contract remain correct by bypassing the output cache. Expansion and dependency
-discovery still run on each request; only final HTML rendering is cached.
-The renderer samples the key before and after expansion and skips the cache when
-content changes during that window.
+`writers` accepts Carve2 `OutputWriter` instances. The engine ships `html` and `carve`. Register writers with the targets `text`, `markdown`, and `ansi` to activate the existing service methods and console choices. Without a registered writer, those methods report that the writer is not available yet.
+
+## Cache and includes
+
+Caching is off by default. A cache key covers source, target, profile, rendering policy, extensions, writers, and `cacheKeySalt`. A custom extension or writer with nonserializable state requires an explicit salt. Change the salt when its behavior changes.
+
+`includeResolver` is a container-resolvable Carve2 `IncludeResolver`. It receives a request with `path`, `from`, `options`, `section`, and `budget`, then returns `['text' => $source, 'id' => $stableId]` or `['error' => 'not_found']` and the other documented causes. The adapter also accepts the old resolver interface for migration, but all parsing and rendering use Carve2. Include output is cached only when the resolver also implements `IncludeCacheKeyProvider`. `IncludeOptions` can narrow depth and byte limits; Carve2 does not expose the old resolver-call and warning limits yet, and nondefault values fail explicitly.
