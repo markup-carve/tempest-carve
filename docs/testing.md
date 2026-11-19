@@ -1,6 +1,6 @@
 # Testing
 
-Install the pinned Carve2 dependency and run the package checks:
+Install the pinned Carve dependency and run the package checks:
 
 ```sh
 composer update

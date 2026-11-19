@@ -36,7 +36,7 @@ updating the package when the application uses a discovery cache.
 
 ## Output formats
 
-`render()` and `renderHtml()` return safe HTML. The service retains `renderMarkdown()`, `renderPlainText()`, and `renderAnsi()` and the matching console choices. They use Carve2's writer registry. Until an application registers the corresponding `OutputWriter`, each call fails with a clear writer unavailable error. The view component always uses HTML.
+`render()` and `renderHtml()` return safe HTML. The service retains `renderMarkdown()`, `renderPlainText()`, and `renderAnsi()` and the matching console choices. They use Carve's writer registry. Until an application registers the corresponding `OutputWriter`, each call fails with a clear writer unavailable error. The view component always uses HTML.
 
 Register a writer in `CarveConfig::writers` when one is available:
 
@@ -44,7 +44,7 @@ Register a writer in `CarveConfig::writers` when one is available:
 return new CarveConfig(writers: [new App\Carve\TextWriter()]);
 ```
 
-The writer targets are `markdown`, `text`, and `ansi`. Carve2 ships `html` and `carve` by default.
+The writer targets are `markdown`, `text`, and `ansi`. Carve ships `html` and `carve` by default.
 
 ## Diagnostics
 
@@ -71,7 +71,7 @@ the current source.
 
 ## Includes
 
-Configure a Carve2 `IncludeResolver` in `CarveConfig::includeResolver`, then call `renderIncluded()` with an optional `IncludeOptions` value. The result carries HTML, diagnostics, and dependencies. `suppressedWarnings` is currently null because Carve2 does not expose that count. Depth and byte limits may be narrowed; nondefault resolver-call and warning limits fail explicitly until the engine supplies them.
+Configure a Carve `IncludeResolver` in `CarveConfig::includeResolver`, then call `renderIncluded()` with an optional `IncludeOptions` value. The result carries HTML, diagnostics, and dependencies. `suppressedWarnings` is currently null because Carve does not expose that count. Depth and byte limits may be narrowed; nondefault resolver-call and warning limits fail explicitly until the engine supplies them.
 
 ## Lint, format and import
 
@@ -82,7 +82,7 @@ $canonical = $carve->format($source, alignTables: true);
 $fromHtml = $carve->fromHtml($html);
 ```
 
-Each lint finding has `rule`, `message`, `file`, `line`, `column`, and the underlying Carve2 `diagnostic`. HTML import uses Carve2's importer. `fromMarkdown()` remains a public method and reports that the Markdown importer is not available yet.
+Each lint finding has `rule`, `message`, `file`, `line`, `column`, and the underlying Carve `diagnostic`. HTML import uses Carve's importer. `fromMarkdown()` remains a public method and reports that the Markdown importer is not available yet.
 
 ## Console commands
 

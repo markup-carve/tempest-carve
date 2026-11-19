@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace MarkupCarve\Tempest;
 
 use InvalidArgumentException;
-use MarkupCarve\Carve2\Extension\Claim;
-use MarkupCarve\Carve2\Extension\ExtensionDefinition;
-use MarkupCarve\Carve2\Extension\ExtensionProvider;
-use MarkupCarve\Carve2\Extension\RenderHost;
-use MarkupCarve\Carve2\Extension\Tabs;
-use MarkupCarve\Carve2\Node;
+use MarkupCarve\Carve\Extension\Claim;
+use MarkupCarve\Carve\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Extension\ExtensionProvider;
+use MarkupCarve\Carve\Extension\RenderHost;
+use MarkupCarve\Carve\Extension\Tabs;
+use MarkupCarve\Carve\Node;
 use MarkupCarve\Tempest\Highlight\TempestHighlightExtension;
 
 final class ExtensionFactory
@@ -79,7 +79,7 @@ final class ExtensionFactory
             );
         }
 
-        throw new InvalidArgumentException(sprintf('Unknown Carve2 extension "%s".', $type));
+        throw new InvalidArgumentException(sprintf('Unknown Carve extension "%s".', $type));
     }
 
     /**
@@ -93,7 +93,7 @@ final class ExtensionFactory
     {
         foreach (array_keys($config) as $key) {
             if (!in_array($key, $allowed, true)) {
-                throw new InvalidArgumentException(sprintf('Unknown option "%s" for Carve2 extension "%s".', $key, $type));
+                throw new InvalidArgumentException(sprintf('Unknown option "%s" for Carve extension "%s".', $key, $type));
             }
         }
     }

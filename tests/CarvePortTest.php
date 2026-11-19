@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tests;
 
 use InvalidArgumentException;
-use MarkupCarve\Carve2\Include\IncludeResolver;
-use MarkupCarve\Carve2\Node;
-use MarkupCarve\Carve2\Output\OutputWriter;
+use MarkupCarve\Carve\Include\IncludeResolver;
+use MarkupCarve\Carve\Node;
+use MarkupCarve\Carve\Output\OutputWriter;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveRenderer;
 use MarkupCarve\Tempest\ExtensionFactory;
@@ -15,10 +15,10 @@ use MarkupCarve\Tempest\Validation\ValidCarve;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class Carve2PortTest extends TestCase
+final class CarvePortTest extends TestCase
 {
     #[Test]
-    public function testRendersCarve2WithSecureDefaultsAndOptions(): void
+    public function testRendersCarveWithSecureDefaultsAndOptions(): void
     {
         $renderer = CarveRenderer::safe(new CarveConfig(headingIds: 'lower', smartTypography: false));
         self::assertSame(
@@ -30,7 +30,7 @@ final class Carve2PortTest extends TestCase
     }
 
     #[Test]
-    public function testUsesARegisteredCarve2Writer(): void
+    public function testUsesARegisteredCarveWriter(): void
     {
         $writer = new class implements OutputWriter {
             public function target(): string
@@ -51,18 +51,18 @@ final class Carve2PortTest extends TestCase
     public function testUnregisteredWriterReportsItsGap(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Markdown writer not available yet in Carve2.');
+        $this->expectExceptionMessage('Markdown writer not available yet in Carve.');
         CarveRenderer::safe()->renderMarkdown('text');
     }
 
     #[Test]
     public function testPendingWritersAreNamedSkips(): void
     {
-        $this->markTestSkipped('Carve2 text, Markdown, and ANSI writers pending in carve-php issue 5235.');
+        $this->markTestSkipped('Carve text, Markdown, and ANSI writers pending in carve-php issue 5235.');
     }
 
     #[Test]
-    public function testRendersIncludesThroughTheCarve2Resolver(): void
+    public function testRendersIncludesThroughTheCarveResolver(): void
     {
         $resolver = new class implements IncludeResolver {
             public function resolve(array $request): array
@@ -94,7 +94,7 @@ final class Carve2PortTest extends TestCase
     }
 
     #[Test]
-    public function testLintFormatAndHtmlImportUseCarve2(): void
+    public function testLintFormatAndHtmlImportUseCarve(): void
     {
         $renderer = CarveRenderer::safe();
         self::assertSame('markdown-strong-double-star', $renderer->lint('**bold**')[0]->rule);
@@ -103,14 +103,14 @@ final class Carve2PortTest extends TestCase
     }
 
     #[Test]
-    public function testValidationUsesCarve2ProfilesAndLint(): void
+    public function testValidationUsesCarveProfilesAndLint(): void
     {
         self::assertTrue((new ValidCarve())->isValid('/fine/'));
         self::assertFalse((new ValidCarve(lint: true))->isValid('**bold**'));
     }
 
     #[Test]
-    public function testExtensionFactoryRegistersCarve2Fences(): void
+    public function testExtensionFactoryRegistersCarveFences(): void
     {
         $extension = (new ExtensionFactory())->create('mermaid');
         $html = CarveRenderer::safe(extensions: [$extension])->render("```mermaid\ngraph TD\n```\n");
@@ -120,12 +120,12 @@ final class Carve2PortTest extends TestCase
     #[Test]
     public function testPendingInlineWikiExtensionIsNamedSkip(): void
     {
-        $this->markTestSkipped('Carve2 inline wiki rendering pending in carve-php issue 5243.');
+        $this->markTestSkipped('Carve inline wiki rendering pending in carve-php issue 5243.');
     }
 
     #[Test]
     public function testPendingIncludeLimitsAreNamedSkip(): void
     {
-        $this->markTestSkipped('Carve2 include call and diagnostic limits pending in carve-php issue 5244.');
+        $this->markTestSkipped('Carve include call and diagnostic limits pending in carve-php issue 5244.');
     }
 }

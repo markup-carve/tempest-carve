@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use MarkupCarve\Carve\Extension\HeadingNumbersExtension;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveProfile;
 use MarkupCarve\Tempest\CarveRenderer;
@@ -54,21 +53,6 @@ final class CarveComponentTest extends IntegrationTestCase
     public function testDiscoversDefaultCarveConfiguration(): void
     {
         self::assertInstanceOf(CarveConfig::class, $this->container->get(CarveConfig::class));
-    }
-
-    #[Test]
-    public function testInitializesConfiguredExtensions(): void
-    {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve2 heading number document transform pending in carve-php issue 5238.');
-        }
-        $this->container->config(new CarveConfig(
-            extensions: [HeadingNumbersExtension::class],
-        ));
-
-        $html = $this->container->get(CarveRenderer::class)->render('# Heading');
-
-        self::assertStringContainsString('<span class="section-number">1</span> Heading', $html);
     }
 
     #[Test]

@@ -12,7 +12,7 @@ language for documents and the web, in
 
 **[View the live demo →](https://markup-carve.github.io/tempest-carve-demo/)**
 
-Install the development branch from Git. The package pins its Carve2 engine to a
+Install the development branch from Git. The package pins its Carve engine to a
 specific commit on carve-php's `next2` branch.
 
 ```sh
@@ -26,7 +26,7 @@ php tempest discovery:generate --no-interaction
 <x-carve :content="$document" />
 ```
 
-This `next2` branch uses Carve 0.2 from a pinned carve-php development commit. The renderer supports named configurations, profiles, diagnostics, includes, caching, lint, formatting, HTML import, validation, and a model property type. Markdown, text, and ANSI service methods remain available through the Carve2 writer registry, and report a clear unavailable-writer error until their writers are registered. Markdown import likewise reports that it is unavailable in Carve2. No registry release is required to install the pinned engine commit.
+This `next2` branch uses Carve 0.2 from a pinned carve-php development commit. The renderer supports named configurations, profiles, diagnostics, includes, caching, lint, formatting, HTML import, validation, and a model property type. Markdown, text, and ANSI service methods remain available through the Carve writer registry, and report a clear unavailable-writer error until their writers are registered. Markdown import likewise reports that it is unavailable in Carve. No registry release is required to install the pinned engine commit.
 
 Tempest discovers the component and its `CarveRenderer` initializer from the
 package. See [Usage](docs/usage.md), [Configuration](docs/configuration.md),

@@ -24,7 +24,7 @@ final class CarveIntegrationToolingTest extends IntegrationTestCase
             ->assertSuccess()
             ->assertContains('<h1>Title</h1>');
         $this->console->call('carve:render ' . $this->files . '/table.crv --format=markdown')
-            // Carve2 writer registry does not have the Markdown target yet (carve-php issue 5235).
+            // Carve writer registry does not have the Markdown target yet (carve-php issue 5235).
             ->assertError()
             ->assertContains('Markdown writer not available yet');
         $this->console->call('carve:render ' . $this->files . '/table.crv --format=pdf')
@@ -107,7 +107,7 @@ final class CarveIntegrationToolingTest extends IntegrationTestCase
     public function testConvertCommandImportsMarkdownAndHtml(): void
     {
         $this->console->call('carve:convert ' . $this->files . '/page.md')
-            // Carve2 Markdown import awaits carve-php issue 5237.
+            // Carve Markdown import awaits carve-php issue 5237.
             ->assertError()
             ->assertContains('Markdown importer not available yet');
         $this->console->call('carve:convert ' . $this->files . '/page.html')
@@ -123,7 +123,7 @@ final class CarveIntegrationToolingTest extends IntegrationTestCase
     public function testCommandsUseTheConfiguredRenderer(): void
     {
         if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve2 inline wiki renderer pending in carve-php issue 5243.');
+            $this->markTestSkipped('Carve inline wiki renderer pending in carve-php issue 5243.');
         }
         $this->container->config(new CarveConfig(extensions: [['type' => 'wikilinks', 'url_template' => '/w/{page}']]));
         $file = sys_get_temp_dir() . '/tempest-carve-wiki-' . bin2hex(random_bytes(6)) . '.crv';

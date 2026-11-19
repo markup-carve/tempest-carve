@@ -6,13 +6,11 @@ namespace MarkupCarve\Tempest;
 
 use Closure;
 use InvalidArgumentException;
-use MarkupCarve\Carve\Transform\IncludeContext;
-use MarkupCarve\Carve\Transform\IncludeResolverInterface as LegacyIncludeResolver;
-use MarkupCarve\Carve2\Carve2;
-use MarkupCarve\Carve2\Diagnostics\Diagnostic;
-use MarkupCarve\Carve2\Include\IncludeResolver;
-use MarkupCarve\Carve2\Output\WriterRegistry;
-use MarkupCarve\Carve2\RenderResult;
+use MarkupCarve\Carve\Carve;
+use MarkupCarve\Carve\Diagnostics\Diagnostic;
+use MarkupCarve\Carve\Include\IncludeResolver;
+use MarkupCarve\Carve\Output\WriterRegistry;
+use MarkupCarve\Carve\RenderResult;
 use MarkupCarve\Tempest\Internal\OutputFormat;
 use Tempest\Cache\Cache;
 use Throwable;
@@ -23,10 +21,10 @@ final class CarveRenderer
     /**
      * @var string
      */
-    private const CACHE_SCHEMA = '2';
+    private const CACHE_SCHEMA = '3';
 
     /**
-     * @var list<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider>
+     * @var list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider>
      */
     private array $extensions;
 
@@ -47,9 +45,9 @@ final class CarveRenderer
     /**
      * @param \MarkupCarve\Tempest\CarveConfig $config
      * @param \Tempest\Cache\Cache|null $cache
-     * @param iterable<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider> $extensions
+     * @param iterable<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider> $extensions
      * @param array<string, self> $namedRenderers
-     * @param \MarkupCarve\Carve2\Include\IncludeResolver|\MarkupCarve\Carve\Transform\IncludeResolverInterface|null $includeResolver
+     * @param \MarkupCarve\Carve\Include\IncludeResolver|null $includeResolver
      * @param array<int, string> $extensionKeys
      */
     public function __construct(
@@ -57,13 +55,13 @@ final class CarveRenderer
         private readonly ?Cache $cache = null,
         iterable $extensions = [],
         array $namedRenderers = [],
-        private readonly IncludeResolver|LegacyIncludeResolver|null $includeResolver = null,
+        private readonly ?IncludeResolver $includeResolver = null,
         array $extensionKeys = [],
     ) {
         $this->extensions = array_values([...$extensions]);
         $this->namedRenderers = $namedRenderers;
         $this->extensionKeys = $extensionKeys;
-        $this->writers = Carve2::writers();
+        $this->writers = Carve::writers();
         foreach ($config->writers as $writer) {
             $this->writers->register($writer);
         }
@@ -73,16 +71,16 @@ final class CarveRenderer
     /**
      * @param \MarkupCarve\Tempest\CarveConfig|null $config
      * @param \Tempest\Cache\Cache|null $cache
-     * @param iterable<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider> $extensions
+     * @param iterable<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider> $extensions
      * @param array<string, self> $namedRenderers
-     * @param \MarkupCarve\Carve2\Include\IncludeResolver|\MarkupCarve\Carve\Transform\IncludeResolverInterface|null $includeResolver
+     * @param \MarkupCarve\Carve\Include\IncludeResolver|null $includeResolver
      */
     public static function safe(
         ?CarveConfig $config = null,
         ?Cache $cache = null,
         iterable $extensions = [],
         array $namedRenderers = [],
-        IncludeResolver|LegacyIncludeResolver|null $includeResolver = null,
+        ?IncludeResolver $includeResolver = null,
     ): self {
         return new self($config ?? new CarveConfig(), $cache, $extensions, $namedRenderers, $includeResolver);
     }
@@ -128,13 +126,13 @@ final class CarveRenderer
         }
         $options ??= new IncludeOptions();
         if ($options->resolverCallLimit !== 1000 || $options->warningLimit !== 100) {
-            throw new InvalidArgumentException('Carve2 does not expose include resolver-call or warning limits yet.');
+            throw new InvalidArgumentException('Carve does not expose include resolver-call or warning limits yet.');
         }
         $resolverKeyBefore = $this->includeResolver instanceof IncludeCacheKeyProvider
             ? $this->includeResolver->includeCacheKey([])
             : null;
         $includeSources = [];
-        $resolver = $this->capturingResolver($this->resolver($this->includeResolver), $includeSources);
+        $resolver = $this->capturingResolver($this->includeResolver, $includeSources);
         $engineOptions = $this->options($profile);
         $engineOptions['includes'] = [
             'resolver' => $resolver,
@@ -144,7 +142,7 @@ final class CarveRenderer
         if ($options->byteBudget !== null) {
             $engineOptions['includes']['bytes'] = $options->byteBudget;
         }
-        $parsed = Carve2::parseWithDiagnostics($source, [
+        $parsed = Carve::parseWithDiagnostics($source, [
             'extensions' => $this->extensions,
             'headingIds' => $this->config->headingIds,
             'includes' => $engineOptions['includes'],
@@ -154,9 +152,9 @@ final class CarveRenderer
                 'target' => $entry['file'] ?? $entry['path'],
                 'resolved' => $entry['read'],
             ],
-            Carve2::includeDependencies($parsed->tree),
+            Carve::includeDependencies($parsed->tree),
         ));
-        $render = static fn (): RenderResult => Carve2::renderWithDiagnostics($parsed->tree, $engineOptions);
+        $render = static fn (): RenderResult => Carve::renderWithDiagnostics($parsed->tree, $engineOptions);
         $renderResult = null;
         if ($this->cache !== null && $this->config->cacheEnabled && $this->includeResolver instanceof IncludeCacheKeyProvider) {
             $resolverKeyAfter = $this->includeResolver->includeCacheKey($dependencies);
@@ -194,7 +192,7 @@ final class CarveRenderer
         CarveProfile|string|null $profile = null,
     ): RenderReport {
         $options = $this->options($profile);
-        $result = Carve2::renderWithDiagnostics($source, $options);
+        $result = Carve::renderWithDiagnostics($source, $options);
         $parse = [];
         $losses = [];
         foreach ($result->diagnostics as $diagnostic) {
@@ -206,7 +204,7 @@ final class CarveRenderer
             }
         }
         if ($strictLosses && $losses !== []) {
-            Carve2::render($source, $options + ['strictLosses' => true]);
+            Carve::render($source, $options + ['strictLosses' => true]);
         }
 
         return new RenderReport(
@@ -224,7 +222,7 @@ final class CarveRenderer
      */
     public function lint(string $source): array
     {
-        return $this->lintFindings(Carve2::lint($source, [
+        return $this->lintFindings(Carve::lint($source, [
             'extensions' => $this->extensions,
         ]), $source);
     }
@@ -232,7 +230,7 @@ final class CarveRenderer
     /**
      * @param string $source
      * @param string|null $sourcePath
-     * @param \MarkupCarve\Carve2\Include\IncludeResolver|\MarkupCarve\Carve\Transform\IncludeResolverInterface|null $resolver
+     * @param \MarkupCarve\Carve\Include\IncludeResolver|null $resolver
      *
      * @throws \InvalidArgumentException
      *
@@ -241,32 +239,32 @@ final class CarveRenderer
     public function lintIncluded(
         string $source,
         ?string $sourcePath = null,
-        IncludeResolver|LegacyIncludeResolver|null $resolver = null,
+        ?IncludeResolver $resolver = null,
     ): array {
         $resolver ??= $this->includeResolver
             ?? throw new InvalidArgumentException('No Carve include resolver is configured.');
         $includeSources = [];
         $options = [
             'extensions' => $this->extensions,
-            'includes' => ['resolver' => $this->capturingResolver($this->resolver($resolver), $includeSources), 'file' => $sourcePath],
+            'includes' => ['resolver' => $this->capturingResolver($resolver, $includeSources), 'file' => $sourcePath],
         ];
 
-        return $this->lintFindings(Carve2::lint($source, $options), $source, $includeSources);
+        return $this->lintFindings(Carve::lint($source, $options), $source, $includeSources);
     }
 
     public function format(string $source, bool $alignTables = false): string
     {
-        return Carve2::format($source, ['alignTables' => $alignTables, 'extensions' => $this->extensions]);
+        return Carve::format($source, ['alignTables' => $alignTables, 'extensions' => $this->extensions]);
     }
 
     public function fromMarkdown(string $source): string
     {
-        throw new InvalidArgumentException('Markdown importer not available yet in Carve2.');
+        throw new InvalidArgumentException('Markdown importer not available yet in Carve.');
     }
 
     public function fromHtml(string $source): string
     {
-        return Carve2::importDocument($source, ['from' => 'html'])->source;
+        return Carve::importDocument($source, ['from' => 'html'])->source;
     }
 
     private function renderOutput(OutputFormat $output, string $source, CarveProfile|string|null $profile): string
@@ -274,14 +272,14 @@ final class CarveRenderer
         $render = function () use ($output, $source, $profile): string {
             $options = $this->options($profile);
             if ($output === OutputFormat::Html) {
-                return Carve2::render($source, $options);
+                return Carve::render($source, $options);
             }
             $target = $output === OutputFormat::Plain ? 'text' : $output->value;
             if (!$this->writers->has($target)) {
-                throw new InvalidArgumentException(sprintf('%s writer not available yet in Carve2.', ucfirst($target)));
+                throw new InvalidArgumentException(sprintf('%s writer not available yet in Carve.', ucfirst($target)));
             }
 
-            return Carve2::writeTo($target, Carve2::parse($source, [
+            return Carve::writeTo($target, Carve::parse($source, [
                 'extensions' => $this->extensions,
                 'headingIds' => $this->config->headingIds,
             ]), $options, $this->writers);
@@ -325,37 +323,8 @@ final class CarveRenderer
         return $options;
     }
 
-    private function resolver(IncludeResolver|LegacyIncludeResolver $resolver): IncludeResolver
-    {
-        if ($resolver instanceof IncludeResolver) {
-            return $resolver;
-        }
-
-        return new class ($resolver) implements IncludeResolver {
-            public function __construct(private readonly LegacyIncludeResolver $legacy)
-            {
-            }
-
-            public function resolve(array $request): array
-            {
-                $found = $this->legacy->resolve(
-                    $request['path'],
-                    new IncludeContext($request['from'] ?? null, $request['from'] ?? null),
-                );
-
-                if ($found === null) {
-                    return ['error' => 'not_found'];
-                }
-
-                return is_string($found)
-                    ? ['text' => $found, 'id' => $request['path']]
-                    : ['text' => $found->getSource(), 'id' => $found->getId() ?? $request['path']];
-            }
-        };
-    }
-
     /**
-     * @param \MarkupCarve\Carve2\Include\IncludeResolver $resolver
+     * @param \MarkupCarve\Carve\Include\IncludeResolver $resolver
      * @param array<string, string> $sources
      */
     private function capturingResolver(IncludeResolver $resolver, array &$sources): IncludeResolver
@@ -382,7 +351,7 @@ final class CarveRenderer
     }
 
     /**
-     * @param array<\MarkupCarve\Carve2\Diagnostics\Diagnostic> $diagnostics
+     * @param array<\MarkupCarve\Carve\Diagnostics\Diagnostic> $diagnostics
      * @param string $source
      * @param array<string, string> $sources
      *
@@ -398,7 +367,7 @@ final class CarveRenderer
     }
 
     /**
-     * @param \MarkupCarve\Carve2\Diagnostics\Diagnostic $diagnostic
+     * @param \MarkupCarve\Carve\Diagnostics\Diagnostic $diagnostic
      * @param string $source
      * @param array<string, string> $sources
      *

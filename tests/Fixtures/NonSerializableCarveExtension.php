@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tests\Fixtures;
 
 use Closure;
-use MarkupCarve\Carve2\Extension\ExtensionProvider;
+use MarkupCarve\Carve\Extension\ExtensionProvider;
 
-final class NonSerializableCarve2Extension implements ExtensionProvider
+final class NonSerializableCarveExtension implements ExtensionProvider
 {
     private Closure $callback;
 

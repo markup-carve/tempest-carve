@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace MarkupCarve\Tempest;
 
-use MarkupCarve\Carve2\Diagnostics\Diagnostic;
+use MarkupCarve\Carve\Diagnostics\Diagnostic;
 
 final readonly class LintFinding
 {

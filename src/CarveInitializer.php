@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace MarkupCarve\Tempest;
 
 use InvalidArgumentException;
-use MarkupCarve\Carve2\Extension\ExtensionDefinition;
-use MarkupCarve\Carve2\Extension\ExtensionProvider;
+use MarkupCarve\Carve\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Extension\ExtensionProvider;
 use Tempest\Cache\Cache;
 use Tempest\Container\Container;
 use Tempest\Container\Initializer;
@@ -37,11 +37,11 @@ final class CarveInitializer implements Initializer
 
     /**
      * @param \Tempest\Container\Container $container
-     * @param list<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider|string|array<string, mixed>> $entries
+     * @param list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider|string|array<string, mixed>> $entries
      *
      * @throws \InvalidArgumentException
      *
-     * @return array{list<\MarkupCarve\Carve2\Extension\ExtensionDefinition|\MarkupCarve\Carve2\Extension\ExtensionProvider>, array<int, string>}
+     * @return array{list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider>, array<int, string>}
      */
     private function resolveExtensions(Container $container, array $entries): array
     {
@@ -54,7 +54,7 @@ final class CarveInitializer implements Initializer
             } elseif (is_string($entry) && class_exists($entry)) {
                 $resolved = $container->get($entry);
                 if (!$resolved instanceof ExtensionDefinition && !$resolved instanceof ExtensionProvider) {
-                    throw new InvalidArgumentException(sprintf('Configured Carve2 extension %s must be a definition or provider.', $entry));
+                    throw new InvalidArgumentException(sprintf('Configured Carve extension %s must be a definition or provider.', $entry));
                 }
                 $extensions[] = $resolved;
             } else {

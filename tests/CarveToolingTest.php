@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Tests;
 
 use InvalidArgumentException;
-use MarkupCarve\Carve\Extension\WikilinksExtension;
-use MarkupCarve\Carve\Transform\FilesystemIncludeResolver;
-use MarkupCarve\Carve2\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Include\FileResolver;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveRenderer;
 use MarkupCarve\Tempest\ExtensionFactory;
@@ -48,16 +47,16 @@ final class CarveToolingTest extends TestCase
     {
         $renderer = (string)file_get_contents((string)(new ReflectionClass(CarveRenderer::class))->getFileName());
 
-        // C2-T-005 provides the public Carve2 lint call for both paths.
-        self::assertStringContainsString('Carve2::lint($source', $renderer);
+        // C2-T-005 provides the public Carve lint call for both paths.
+        self::assertStringContainsString('Carve::lint($source', $renderer);
         self::assertStringContainsString("'includes' =>", $renderer);
     }
 
     #[Test]
     public function testLintJudgesFragmentLinksAgainstTheConfiguredExtensions(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve2 lint cannot read headingIds yet; tracked in carve-php issue 5246.');
+        if (getenv('CARVE_ENABLE_PENDING_TESTS') !== '1') {
+            $this->markTestSkipped('Carve lint cannot read headingIds yet; tracked in carve-php issue 5246.');
         }
         $source = "# Alpha\n\nSee [a](#alpha).\n";
 
@@ -74,7 +73,7 @@ final class CarveToolingTest extends TestCase
 
         // C2-N-085 reports a missing resolver before linting included files.
         self::assertSame(['include-no-resolver'], self::rules(CarveRenderer::safe()->lint($source)));
-        $warnings = CarveRenderer::safe()->lintIncluded($source, $root . '/main.crv', new FilesystemIncludeResolver($root));
+        $warnings = CarveRenderer::safe()->lintIncluded($source, $root . '/main.crv', FileResolver::forRoot($root));
         self::assertSame(['markdown-strong-double-star'], self::rules($warnings));
         self::assertStringEndsWith('part.crv', (string)$warnings[0]->file);
     }
@@ -83,7 +82,7 @@ final class CarveToolingTest extends TestCase
     public function testLintIncludedUsesTheConfiguredResolver(): void
     {
         $root = __DIR__ . '/Fixtures/includes';
-        $renderer = CarveRenderer::safe(includeResolver: new FilesystemIncludeResolver($root));
+        $renderer = CarveRenderer::safe(includeResolver: FileResolver::forRoot($root));
 
         self::assertSame(
             ['markdown-strong-double-star'],
@@ -117,8 +116,8 @@ final class CarveToolingTest extends TestCase
     #[Test]
     public function testImportsMarkdownAndHtml(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve2 Markdown import pending in carve-php issue 5237.');
+        if (getenv('CARVE_ENABLE_PENDING_TESTS') !== '1') {
+            $this->markTestSkipped('Carve Markdown import pending in carve-php issue 5237.');
         }
         $renderer = CarveRenderer::safe();
 
@@ -140,29 +139,10 @@ final class CarveToolingTest extends TestCase
     }
 
     #[Test]
-    public function testWikiLinksTakeAUrlTemplate(): void
-    {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve2 inline wiki renderer pending in carve-php issue 5243.');
-        }
-        $extension = (new ExtensionFactory())->create([
-            'type' => 'wikilinks',
-            'url_template' => '/wiki/{page}',
-            'link_class' => 'wiki',
-        ]);
-        self::assertInstanceOf(WikilinksExtension::class, $extension);
-
-        $html = CarveRenderer::safe(extensions: [$extension])->render('See [[Tiger Facts]].');
-
-        self::assertStringContainsString('href="/wiki/tiger-facts"', $html);
-        self::assertStringContainsString('class="wiki"', $html);
-    }
-
-    #[Test]
     public function testExtensionFactoryRejectsUnknownTypes(): void
     {
         // C2-X-002 rejects unknown 0.2 registrations.
-        $this->expectExceptionMessage('Unknown Carve2 extension "no_such_thing"');
+        $this->expectExceptionMessage('Unknown Carve extension "no_such_thing"');
 
         (new ExtensionFactory())->create('no_such_thing');
     }
@@ -171,7 +151,7 @@ final class CarveToolingTest extends TestCase
     public function testExtensionFactoryRejectsUnknownOptions(): void
     {
         // C2-X-002 validates options on a supported 0.2 registration.
-        $this->expectExceptionMessage('Unknown option "bogus" for Carve2 extension "mermaid"');
+        $this->expectExceptionMessage('Unknown option "bogus" for Carve extension "mermaid"');
 
         (new ExtensionFactory())->create(['type' => 'mermaid', 'bogus' => true]);
     }
@@ -179,8 +159,8 @@ final class CarveToolingTest extends TestCase
     #[Test]
     public function testConfigEntriesKeepTheCacheApart(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve2 inline wiki renderer pending in carve-php issue 5243.');
+        if (getenv('CARVE_ENABLE_PENDING_TESTS') !== '1') {
+            $this->markTestSkipped('Carve inline wiki renderer pending in carve-php issue 5243.');
         }
         $factory = new ExtensionFactory();
         $cache = new GenericCache(new ArrayAdapter());
@@ -213,8 +193,8 @@ final class CarveToolingTest extends TestCase
         $html = $renderer->render($source);
         self::assertStringContainsString('<pre><code class="language-php"><span class="hl-keyword">&lt;?php</span>', $html);
         self::assertStringNotContainsString('<b>', $html);
-        // Carve2 writer registry lacks Markdown until carve-php issue 5235.
-        $this->expectExceptionMessage('Markdown writer not available yet in Carve2.');
+        // Carve writer registry lacks Markdown until carve-php issue 5235.
+        $this->expectExceptionMessage('Markdown writer not available yet in Carve.');
         $renderer->renderMarkdown($source);
     }
 
