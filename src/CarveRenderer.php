@@ -21,7 +21,7 @@ final class CarveRenderer
     /**
      * @var string
      */
-    private const CACHE_SCHEMA = '2';
+    private const CACHE_SCHEMA = '3';
 
     /**
      * @var list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider>
