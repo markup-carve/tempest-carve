@@ -17,6 +17,7 @@ final readonly class CarveConfig
      * @param bool $cacheEnabled
      * @param \MarkupCarve\Tempest\CarveProfile|string $profile
      * @param bool $smartTypography
+     * @param string $softBreakMode
      * @param bool $sourceLines
      * @param string $headingIds
      * @param string $mode
@@ -43,6 +44,7 @@ final readonly class CarveConfig
         public string $cacheKeySalt = '',
         public array $namedRenderers = [],
         public ?string $includeResolver = null,
+        public string $softBreakMode = 'newline',
     ) {
     }
 
