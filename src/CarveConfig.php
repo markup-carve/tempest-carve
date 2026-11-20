@@ -30,7 +30,6 @@ final readonly class CarveConfig
     public function __construct(
         public CarveProfile|string $profile = CarveProfile::Full,
         public bool $smartTypography = true,
-        public string $softBreakMode = 'newline',
         public bool $sourceLines = false,
         public string $headingIds = 'keep-case',
         public string $mode = 'interactive',
@@ -45,6 +44,7 @@ final readonly class CarveConfig
         public string $cacheKeySalt = '',
         public array $namedRenderers = [],
         public ?string $includeResolver = null,
+        public string $softBreakMode = 'newline',
     ) {
     }
 

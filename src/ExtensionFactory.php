@@ -66,13 +66,16 @@ final class ExtensionFactory
 
             return Wikilinks::bundle($generator, $cssClass, $newWindow);
         }
-        if ($type === 'mermaid' || $type === 'fenced_render') {
+        if ($type === 'mermaid' || $type === 'fenced_render' || ($type === 'plantuml' && array_key_exists('language', $config))) {
             $engineOptions = ['css_class', 'tag', 'content_mode', 'wrap_in_figure', 'figure_class', 'label'];
             if (array_intersect(array_keys($config), $engineOptions) !== []) {
-                return $this->fromEngine($entry);
+                $engineEntry = $config + ['language' => $type === 'plantuml' ? 'plantuml' : 'mermaid'];
+                $engineEntry['type'] = 'fenced_render';
+
+                return $this->fromEngine($engineEntry);
             }
             $this->only($config, ['language'], $type);
-            $language = $config['language'] ?? 'mermaid';
+            $language = $config['language'] ?? ($type === 'plantuml' ? 'plantuml' : 'mermaid');
             if (!is_string($language) || preg_match('/^[a-z][a-z0-9_-]*$/', $language) !== 1) {
                 throw new InvalidArgumentException('The fenced render language must be a simple lowercase name.');
             }

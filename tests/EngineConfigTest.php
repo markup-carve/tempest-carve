@@ -6,6 +6,7 @@ namespace Tests;
 
 use InvalidArgumentException;
 use MarkupCarve\Tempest\CarveConfig;
+use MarkupCarve\Tempest\CarveProfile;
 use MarkupCarve\Tempest\CarveRenderer;
 use MarkupCarve\Tempest\EngineExtensionFactory;
 use MarkupCarve\Tempest\ExtensionFactory;
@@ -38,6 +39,13 @@ final class EngineConfigTest extends TestCase
         self::assertNotSame('', (new CarveRenderer(extensions: [$factory->create($entry)]))->render('hello'));
     }
 
+    public function testExternalLinksNofollowOption(): void
+    {
+        $entry = ['type' => 'external_links', 'nofollow' => true];
+        $extension = (new ExtensionFactory())->create($entry);
+        self::assertStringContainsString('nofollow', (new CarveRenderer(extensions: [$extension]))->render('[x](https://example.com)'));
+    }
+
     public function testUnknownOptionIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
@@ -60,11 +68,17 @@ final class EngineConfigTest extends TestCase
         self::assertStringContainsString('class="custom"', $generated->render(':wiki[Home]'));
         $puml = new CarveRenderer(extensions: [$factory->create('plantuml')]);
         self::assertStringContainsString('class="plantuml"', $puml->render("```puml\nA -> B\n```"));
+        $legacy = new CarveRenderer(extensions: [$factory->create(['type' => 'plantuml', 'language' => 'puml'])]);
+        self::assertStringContainsString('class="puml"', $legacy->render("```puml\nA -> B\n```"));
+        $custom = new CarveRenderer(extensions: [$factory->create(['type' => 'mermaid', 'language' => 'custom', 'css_class' => 'diagram'])]);
+        self::assertStringContainsString('class="diagram"', $custom->render("```custom\nA -> B\n```"));
     }
 
     public function testSoftBreakMode(): void
     {
         $renderer = new CarveRenderer(new CarveConfig(softBreakMode: 'space'));
         self::assertStringContainsString('a b', $renderer->render("a\nb"));
+        $positional = new CarveConfig(CarveProfile::Full, true, true);
+        self::assertTrue($positional->sourceLines);
     }
 }
