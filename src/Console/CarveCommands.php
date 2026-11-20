@@ -137,7 +137,7 @@ final readonly class CarveCommands
     public function convert(
         #[ConsoleArgument(description: 'The Markdown or HTML file to convert')]
         string $path,
-        #[ConsoleArgument(description: 'markdown or html (guessed from the file extension)')]
+        #[ConsoleArgument(description: 'markdown (GitHub Flavored), gfm or html (guessed from the file extension)')]
         ?string $from = null,
         #[ConsoleArgument(description: 'Write to this file instead of the console')]
         ?string $output = null,
@@ -154,7 +154,7 @@ final readonly class CarveCommands
         };
         try {
             $converted = match ($from) {
-                'markdown', 'md' => $this->carve->fromMarkdown($source),
+                'markdown', 'md', 'gfm' => $this->carve->fromMarkdown($source),
                 'html' => $this->carve->fromHtml($source),
                 default => null,
             };
