@@ -8,8 +8,11 @@ use Closure;
 use InvalidArgumentException;
 use MarkupCarve\Carve\Carve;
 use MarkupCarve\Carve\Diagnostics\Diagnostic;
+use MarkupCarve\Carve\Extension\Bundle;
 use MarkupCarve\Carve\Include\IncludeResolver;
+use MarkupCarve\Carve\Node;
 use MarkupCarve\Carve\Output\WriterRegistry;
+use MarkupCarve\Carve\RenderError;
 use MarkupCarve\Carve\RenderResult;
 use MarkupCarve\Tempest\Internal\OutputFormat;
 use Tempest\Cache\Cache;
@@ -155,7 +158,7 @@ final class CarveRenderer
             ],
             Carve::includeDependencies($parsed->tree),
         ));
-        $render = static fn (): RenderResult => Carve::renderWithDiagnostics($parsed->tree, $engineOptions);
+        $render = fn (): RenderResult => $this->renderEngine($parsed->tree, $engineOptions);
         $renderResult = null;
         if ($this->cache !== null && $this->config->cacheEnabled && $this->includeResolver instanceof IncludeCacheKeyProvider) {
             $resolverKeyAfter = $this->includeResolver->includeCacheKey($dependencies);
@@ -193,7 +196,7 @@ final class CarveRenderer
         CarveProfile|string|null $profile = null,
     ): RenderReport {
         $options = $this->options($profile);
-        $result = Carve::renderWithDiagnostics($source, $options);
+        $result = $this->renderEngine($source, $options);
         $parse = [];
         $losses = [];
         foreach ($result->diagnostics as $diagnostic) {
@@ -205,7 +208,7 @@ final class CarveRenderer
             }
         }
         if ($strictLosses && $losses !== []) {
-            Carve::render($source, $options + ['strictLosses' => true]);
+            $this->renderEngine($source, array_replace($options, ['strictLosses' => true]));
         }
 
         return new RenderReport(
@@ -274,7 +277,7 @@ final class CarveRenderer
         $render = function () use ($output, $source, $profile): string {
             $options = $this->options($profile);
             if ($output === OutputFormat::Html) {
-                return Carve::render($source, $options);
+                return $this->renderEngine($source, $options)->html;
             }
             $target = $output === OutputFormat::Plain
                 ? ($this->writers->has('text') ? 'text' : 'plain')
@@ -311,6 +314,32 @@ final class CarveRenderer
     }
 
     /**
+     * @param \MarkupCarve\Carve\Node|string $source
+     * @param array<string, mixed> $options
+     *
+     * @throws \MarkupCarve\Carve\RenderError
+     */
+    private function renderEngine(Node|string $source, array $options): RenderResult
+    {
+        $transforms = [];
+        foreach ($this->extensions as $extension) {
+            if ($extension instanceof Bundle) {
+                array_push($transforms, ...array_values($extension->transforms()));
+            }
+        }
+
+        $result = Carve::renderWithDocumentTransforms($source, $transforms, $options);
+        if (($options['strictLosses'] ?? false) === true) {
+            $losses = array_values(array_filter($result->diagnostics, static fn (Diagnostic $d): bool => $d->channel === 'render-loss'));
+            if ($losses !== []) {
+                throw new RenderError($losses);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function options(CarveProfile|string|null $profile): array
@@ -318,6 +347,7 @@ final class CarveRenderer
         $options = [
             'profile' => $profile instanceof CarveProfile ? $profile->value : ($profile ?? $this->config->profileName()),
             'smartTypography' => $this->config->smartTypography,
+            'softBreak' => $this->config->softBreakMode,
             'sourceLines' => $this->config->sourceLines,
             'headingIds' => $this->config->headingIds,
             'mode' => $this->config->mode,
@@ -442,7 +472,7 @@ final class CarveRenderer
             $writers[] = $this->objectFingerprint($writer);
         }
         $configuration = json_encode([
-            $this->config->profileName(), $this->config->smartTypography, $this->config->sourceLines,
+            $this->config->profileName(), $this->config->smartTypography, $this->config->softBreakMode, $this->config->sourceLines,
             $this->config->headingIds, $this->config->mode, $this->config->sections,
             $this->config->rawHtml, $this->config->urlPolicy, $extensions, $writers,
             $this->config->cacheKeySalt,

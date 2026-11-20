@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use Composer\InstalledVersions;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveProfile;
 use MarkupCarve\Tempest\CarveRenderer;
@@ -106,10 +105,6 @@ final class CarveIntegrationToolingTest extends IntegrationTestCase
     #[Test]
     public function testConvertCommandImportsMarkdownAndHtml(): void
     {
-        if (version_compare(InstalledVersions::getVersion('league/config') ?? '0', '1.2.0', '<')) {
-            $this->markTestSkipped('Carve PHP Markdown import fails with this supported league/config version; carve-php issue 5401.');
-        }
-
         $this->console->call('carve:convert ' . $this->files . '/page.md')
             ->assertSuccess()
             ->assertContains('*Bold*');

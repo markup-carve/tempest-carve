@@ -46,24 +46,33 @@ final class ExtensionFactory
             };
         }
         if ($type === 'wikilinks') {
-            $this->only($config, ['url_template', 'url_generator'], $type);
+            $this->only($config, ['url_template', 'url_generator', 'css_class', 'new_window'], $type);
             $template = $config['url_template'] ?? null;
             $generator = $config['url_generator'] ?? null;
+            $cssClass = $config['css_class'] ?? 'wikilink';
+            $newWindow = $config['new_window'] ?? false;
             if ($template !== null && !is_string($template)) {
                 throw new InvalidArgumentException('The wiki URL template must be a string.');
             }
             if ($generator !== null && !$generator instanceof Closure) {
                 throw new InvalidArgumentException('The wiki URL generator must be a closure.');
             }
+            if (!is_string($cssClass) || !is_bool($newWindow)) {
+                throw new InvalidArgumentException('Wikilinks css_class must be a string and new_window a boolean.');
+            }
             if ($generator === null && $template !== null) {
                 $generator = static fn (string $page): string => str_replace('{page}', Wikilinks::slug($page), $template);
             }
 
-            return Wikilinks::bundle($generator);
+            return Wikilinks::bundle($generator, $cssClass, $newWindow);
         }
-        if ($type === 'mermaid' || $type === 'plantuml' || $type === 'fenced_render') {
+        if ($type === 'mermaid' || $type === 'fenced_render') {
+            $engineOptions = ['css_class', 'tag', 'content_mode', 'wrap_in_figure', 'figure_class', 'label'];
+            if (array_intersect(array_keys($config), $engineOptions) !== []) {
+                return $this->fromEngine($entry);
+            }
             $this->only($config, ['language'], $type);
-            $language = $config['language'] ?? ($type === 'plantuml' ? 'plantuml' : 'mermaid');
+            $language = $config['language'] ?? 'mermaid';
             if (!is_string($language) || preg_match('/^[a-z][a-z0-9_-]*$/', $language) !== 1) {
                 throw new InvalidArgumentException('The fenced render language must be a simple lowercase name.');
             }
@@ -97,7 +106,49 @@ final class ExtensionFactory
             );
         }
 
-        throw new InvalidArgumentException(sprintf('Unknown Carve extension "%s".', $type));
+        try {
+            return $this->fromEngine($entry);
+        } catch (InvalidArgumentException $exception) {
+            if (str_contains($exception->getMessage(), 'is not available yet')) {
+                throw new InvalidArgumentException(sprintf('Unknown Carve extension "%s".', $type), 0, $exception);
+            }
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param array<string, mixed>|string $entry
+     */
+    private function fromEngine(array|string $entry): ExtensionDefinition|ExtensionProvider
+    {
+        $definitions = (new EngineExtensionFactory())->create($entry);
+        if (count($definitions) === 1) {
+            return $definitions[0];
+        }
+
+        return new class ($definitions) implements ExtensionProvider {
+            /**
+             * @param list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider> $definitions
+             */
+            public function __construct(private readonly array $definitions)
+            {
+            }
+
+            public function definitions(): array
+            {
+                $out = [];
+                foreach ($this->definitions as $definition) {
+                    if ($definition instanceof ExtensionProvider) {
+                        array_push($out, ...$definition->definitions());
+                    } else {
+                        $out[] = $definition;
+                    }
+                }
+
+                return $out;
+            }
+        };
     }
 
     /**

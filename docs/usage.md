@@ -36,15 +36,15 @@ updating the package when the application uses a discovery cache.
 
 ## Output formats
 
-`render()` and `renderHtml()` return safe HTML. The service retains `renderMarkdown()`, `renderPlainText()`, and `renderAnsi()` and the matching console choices. They use Carve's writer registry. Until an application registers the corresponding `OutputWriter`, each call fails with a clear writer unavailable error. The view component always uses HTML.
+`render()` and `renderHtml()` return safe HTML. The service retains `renderMarkdown()`, `renderPlainText()`, and `renderAnsi()` and the matching console choices. They use Carve's writer registry. The engine supplies the corresponding writers. The view component always uses HTML.
 
-Register a writer in `CarveConfig::writers` when one is available:
+Register a custom writer in `CarveConfig::writers` when needed:
 
 ```php
 return new CarveConfig(writers: [new App\Carve\TextWriter()]);
 ```
 
-The writer targets are `markdown`, `text`, and `ansi`. Carve ships `html` and `carve` by default.
+The writer targets are `markdown`, `text`, and `ansi`. Carve ships all five targets by default.
 
 ## Diagnostics
 
@@ -82,7 +82,7 @@ $canonical = $carve->format($source, alignTables: true);
 $fromHtml = $carve->fromHtml($html);
 ```
 
-Each lint finding has `rule`, `message`, `file`, `line`, `column`, and the underlying Carve `diagnostic`. HTML import uses Carve's importer. `fromMarkdown()` remains a public method and reports that the Markdown importer is not available yet.
+Each lint finding has `rule`, `message`, `file`, `line`, `column`, and the underlying Carve `diagnostic`. HTML import uses Carve's importer. `fromMarkdown()` uses the engine Markdown importer.
 
 ## Console commands
 
@@ -91,7 +91,7 @@ Each lint finding has `rule`, `message`, `file`, `line`, `column`, and the under
 | `carve:render <path> [--format=html\|text\|markdown\|ansi] [--renderer=name] [--output=file]` | Renders a file |
 | `carve:lint <path> [--include-root=dir]` | Lints a file or every `*.crv` below a directory; exits 1 on findings |
 | `carve:fmt <path> [--write\|--check] [--align-tables]` | Prints, rewrites or checks canonical form |
-| `carve:convert <path> [--from=markdown\|html] [--output=file]` | Converts HTML to Carve; Markdown reports an unavailable-importer error |
+| `carve:convert <path> [--from=markdown\|html] [--output=file]` | Converts HTML or Markdown to Carve |
 
 Commands use the discovered `CarveRenderer`, so configured extensions apply.
 Tempest matches positional arguments by position, so put the path before the

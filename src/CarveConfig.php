@@ -17,6 +17,7 @@ final readonly class CarveConfig
      * @param bool $cacheEnabled
      * @param \MarkupCarve\Tempest\CarveProfile|string $profile
      * @param bool $smartTypography
+     * @param string $softBreakMode
      * @param bool $sourceLines
      * @param string $headingIds
      * @param string $mode
@@ -29,6 +30,7 @@ final readonly class CarveConfig
     public function __construct(
         public CarveProfile|string $profile = CarveProfile::Full,
         public bool $smartTypography = true,
+        public string $softBreakMode = 'newline',
         public bool $sourceLines = false,
         public string $headingIds = 'keep-case',
         public string $mode = 'interactive',

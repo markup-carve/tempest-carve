@@ -30,7 +30,7 @@
         "tempest/view": "^3.19"
     },
     "require-dev": {
-        "markup-carve/tempest-highlight-carve": "^0.1.2",
+        "markup-carve/tempest-highlight-carve": "dev-next2#bb8ba4c67eb7d37eb586ce7c7f72e775cde0a1ba",
         "php-collective/code-sniffer": "^0.6.8",
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5",
@@ -73,6 +73,10 @@
         "sort-packages": true
     },
     "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/markup-carve/tempest-highlight-carve.git"
+        },
         {
             "type": "vcs",
             "url": "https://github.com/markup-carve/carve-php.git"
