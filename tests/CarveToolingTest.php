@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace Tests;
 
 use InvalidArgumentException;
-use MarkupCarve\Carve\Extension\LowercaseHeadingIdsExtension;
-use MarkupCarve\Carve\Extension\WikilinksExtension;
-use MarkupCarve\Carve\Lint\LintWarning;
-use MarkupCarve\Carve\Transform\FilesystemIncludeResolver;
+use MarkupCarve\Carve\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Include\FileResolver;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveRenderer;
 use MarkupCarve\Tempest\ExtensionFactory;
 use MarkupCarve\Tempest\Highlight\TempestHighlightExtension;
+use MarkupCarve\Tempest\LintFinding;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -28,8 +27,9 @@ final class CarveToolingTest extends TestCase
 
         self::assertContains('markdown-strong-double-star', self::rules($renderer->lint("**bold**\n")));
         self::assertContains('unattached-block-attribute', self::rules($renderer->lint("{.a}\n\n")));
-        self::assertContains('list-marker-below-content-column', self::rules($renderer->lint("9. a\n   - b\n10. c\n   - d\n")));
-        self::assertContains('consumed-key-near-miss', self::rules($renderer->lint("{lose}\n- a\n- b\n")));
+        // C2-W-106 uses the renamed list hint and the 0.2 consumed table key.
+        self::assertContains('list-item-body-below-content-column', self::rules($renderer->lint("9. a\n   - b\n10. c\n   - d\n")));
+        self::assertContains('consumed-key-near-miss', self::rules($renderer->lint("{tabel}\n```csv\na,b\n```\n")));
         self::assertSame([], $renderer->lint("# Fine\n\n*strong*\n"));
     }
 
@@ -47,8 +47,9 @@ final class CarveToolingTest extends TestCase
     {
         $renderer = (string)file_get_contents((string)(new ReflectionClass(CarveRenderer::class))->getFileName());
 
-        self::assertStringContainsString('new DocumentLinter()', $renderer);
-        self::assertStringContainsString('new IncludeLinter()', $renderer);
+        // C2-T-005 provides the public Carve lint call for both paths.
+        self::assertStringContainsString('Carve::lint($source', $renderer);
+        self::assertStringContainsString("'includes' =>", $renderer);
     }
 
     #[Test]
@@ -57,7 +58,8 @@ final class CarveToolingTest extends TestCase
         $source = "# Alpha\n\nSee [a](#alpha).\n";
 
         self::assertContains('broken-fragment-link', self::rules(CarveRenderer::safe()->lint($source)));
-        self::assertSame([], CarveRenderer::safe(extensions: [new LowercaseHeadingIdsExtension()])->lint($source));
+        // C2-H-131 moves lowercase ids from an extension to headingIds.
+        self::assertSame([], CarveRenderer::safe(new CarveConfig(headingIds: 'lower'))->lint($source));
     }
 
     #[Test]
@@ -66,8 +68,9 @@ final class CarveToolingTest extends TestCase
         $root = __DIR__ . '/Fixtures/includes';
         $source = (string)file_get_contents($root . '/main.crv');
 
-        self::assertSame([], CarveRenderer::safe()->lint($source));
-        $warnings = CarveRenderer::safe()->lintIncluded($source, $root . '/main.crv', new FilesystemIncludeResolver($root));
+        // C2-N-085 reports a missing resolver before linting included files.
+        self::assertSame(['include-no-resolver'], self::rules(CarveRenderer::safe()->lint($source)));
+        $warnings = CarveRenderer::safe()->lintIncluded($source, $root . '/main.crv', FileResolver::forRoot($root));
         self::assertSame(['markdown-strong-double-star'], self::rules($warnings));
         self::assertStringEndsWith('part.crv', (string)$warnings[0]->file);
     }
@@ -76,7 +79,7 @@ final class CarveToolingTest extends TestCase
     public function testLintIncludedUsesTheConfiguredResolver(): void
     {
         $root = __DIR__ . '/Fixtures/includes';
-        $renderer = CarveRenderer::safe(includeResolver: new FilesystemIncludeResolver($root));
+        $renderer = CarveRenderer::safe(includeResolver: FileResolver::forRoot($root));
 
         self::assertSame(
             ['markdown-strong-double-star'],
@@ -96,12 +99,15 @@ final class CarveToolingTest extends TestCase
     public function testFormatReturnsCanonicalSourceAndAlignsTablesOnRequest(): void
     {
         $renderer = CarveRenderer::safe();
-        $table = "| a | bb |\n|---|---|\n| ccc | d |\n";
+        // U-055 replaces GFM separator rows with native header cells.
+        $table = "|= a |= bb |\n| ccc | d |\n";
 
-        self::assertSame("# T\n\ntext\n", $renderer->format("# T\n\ntext  \n"));
+        // C2-W-100 writes the 0.2 canonical heading spelling.
+        self::assertSame("= T\n\ntext\n", $renderer->format("# T\n\ntext  \n"));
         self::assertSame("|= a |= bb |\n| ccc | d |\n", $renderer->format($table));
         self::assertSame("|= a  |= bb |\n| ccc | d   |\n", $renderer->format($table, alignTables: true));
-        self::assertSame("a\n\n***\n\nb\n", $renderer->format("a\n\n---\n\nb\n"));
+        // C2-B-159 reads a hyphen run as text, not a thematic break.
+        self::assertSame("a\n\n---\n\nb\n", $renderer->format("a\n\n---\n\nb\n"));
     }
 
     #[Test]
@@ -109,8 +115,12 @@ final class CarveToolingTest extends TestCase
     {
         $renderer = CarveRenderer::safe();
 
-        self::assertSame("# Hi\n\n*Bold* [link](https://example.com)\n", $renderer->fromMarkdown("# Hi\n\n**Bold** [link](https://example.com)\n"));
-        self::assertSame("# Hi\n\n*Bold*\n", $renderer->fromHtml('<h1>Hi</h1><p><strong>Bold</strong></p>'));
+        self::assertSame("= Hi\n\n*Bold* [link](https://example.com)\n", $renderer->fromMarkdown("# Hi\n\n**Bold** [link](https://example.com)\n"));
+        self::assertSame("= Hi\n\n*Bold*\n", $renderer->fromHtml('<h1>Hi</h1><p><strong>Bold</strong></p>'));
+        self::assertSame(
+            "|= a |={>} b |\n| 1 | 2 |\n\n- [x] done\n",
+            $renderer->fromMarkdown("| a | b |\n|---|--:|\n| 1 | 2 |\n\n- [x] done\n"),
+        );
     }
 
     #[Test]
@@ -118,7 +128,8 @@ final class CarveToolingTest extends TestCase
     {
         $factory = new ExtensionFactory();
 
-        self::assertInstanceOf(LowercaseHeadingIdsExtension::class, $factory->create('lowercase_heading_ids'));
+        // C2-X-002 uses extension definitions; heading ids moved to C2-H-131.
+        self::assertInstanceOf(ExtensionDefinition::class, $factory->create('mermaid'));
         self::assertInstanceOf(TempestHighlightExtension::class, $factory->create('tempest_highlight'));
 
         $html = CarveRenderer::safe(extensions: [$factory->create('mermaid')])->render("``` mermaid\ngraph TD\n```\n");
@@ -126,24 +137,9 @@ final class CarveToolingTest extends TestCase
     }
 
     #[Test]
-    public function testWikiLinksTakeAUrlTemplate(): void
-    {
-        $extension = (new ExtensionFactory())->create([
-            'type' => 'wikilinks',
-            'url_template' => '/wiki/{page}',
-            'link_class' => 'wiki',
-        ]);
-        self::assertInstanceOf(WikilinksExtension::class, $extension);
-
-        $html = CarveRenderer::safe(extensions: [$extension])->render('See [[Tiger Facts]].');
-
-        self::assertStringContainsString('href="/wiki/tiger-facts"', $html);
-        self::assertStringContainsString('class="wiki"', $html);
-    }
-
-    #[Test]
     public function testExtensionFactoryRejectsUnknownTypes(): void
     {
+        // C2-X-002 rejects unknown 0.2 registrations.
         $this->expectExceptionMessage('Unknown Carve extension "no_such_thing"');
 
         (new ExtensionFactory())->create('no_such_thing');
@@ -152,9 +148,10 @@ final class CarveToolingTest extends TestCase
     #[Test]
     public function testExtensionFactoryRejectsUnknownOptions(): void
     {
-        $this->expectExceptionMessage('Unknown option "bogus" for Carve extension "wikilinks"');
+        // C2-X-002 validates options on a supported 0.2 registration.
+        $this->expectExceptionMessage('Unknown option "bogus" for Carve extension "mermaid"');
 
-        (new ExtensionFactory())->create(['type' => 'wikilinks', 'bogus' => true]);
+        (new ExtensionFactory())->create(['type' => 'mermaid', 'bogus' => true]);
     }
 
     #[Test]
@@ -169,8 +166,8 @@ final class CarveToolingTest extends TestCase
         $a = new CarveRenderer($config, $cache, [$factory->create($first)], extensionKeys: [0 => (string)$factory->fingerprint($first)]);
         $b = new CarveRenderer($config, $cache, [$factory->create($second)], extensionKeys: [0 => (string)$factory->fingerprint($second)]);
 
-        self::assertStringContainsString('href="/a/tiger"', $a->render('[[Tiger]]'));
-        self::assertStringContainsString('href="/b/tiger"', $b->render('[[Tiger]]'));
+        self::assertStringContainsString('href="/a/tiger"', $a->render(':wiki[Tiger]'));
+        self::assertStringContainsString('href="/b/tiger"', $b->render(':wiki[Tiger]'));
     }
 
     #[Test]
@@ -191,7 +188,7 @@ final class CarveToolingTest extends TestCase
         $html = $renderer->render($source);
         self::assertStringContainsString('<pre><code class="language-php"><span class="hl-keyword">&lt;?php</span>', $html);
         self::assertStringNotContainsString('<b>', $html);
-        self::assertSame("```php\n<?php echo \"<b>\";\n```\n", $renderer->renderMarkdown($source));
+        self::assertSame(str_replace('``` php', '```php', $source), $renderer->renderMarkdown($source));
     }
 
     #[Test]
@@ -212,12 +209,12 @@ final class CarveToolingTest extends TestCase
     }
 
     /**
-     * @param list<\MarkupCarve\Carve\Lint\LintWarning> $warnings
+     * @param list<\MarkupCarve\Tempest\LintFinding> $warnings
      *
      * @return list<string>
      */
     private static function rules(array $warnings): array
     {
-        return array_map(static fn (LintWarning $warning): string => $warning->rule, $warnings);
+        return array_map(static fn (LintFinding $warning): string => $warning->rule, $warnings);
     }
 }

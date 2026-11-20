@@ -70,13 +70,15 @@ final class ValidCarveTest extends TestCase
 
         $rule = new ValidCarve(lint: true);
         self::assertFalse($rule->isValid("**bold**\n"));
-        self::assertStringContainsString('renders as literal asterisks', $rule->getErrorMessage());
+        // C2-W-103 uses the 0.2 lint catalog message.
+        self::assertStringContainsString('literal text in Carve', $rule->getErrorMessage());
     }
 
     #[Test]
     public function testStrictModeFailsOnParseWarnings(): void
     {
-        $source = "[^missing]\n";
+        // C2-N-083 reports an unresolved include on the parse channel.
+        $source = "{{ missing }}\n";
 
         self::assertTrue((new ValidCarve())->isValid($source));
         self::assertFalse((new ValidCarve(strict: true))->isValid($source));
