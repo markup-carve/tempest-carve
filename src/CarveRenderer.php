@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MarkupCarve\Tempest;
 
 use Closure;
+use Composer\InstalledVersions;
 use InvalidArgumentException;
 use MarkupCarve\Carve\Carve;
 use MarkupCarve\Carve\Diagnostics\Diagnostic;
@@ -502,6 +503,7 @@ final class CarveRenderer
             $writers[] = $this->objectFingerprint($writer);
         }
         $configuration = json_encode([
+            InstalledVersions::getReference('markup-carve/carve-php'),
             $this->config->profileName(), $this->config->smartTypography, $this->config->softBreakMode, $this->config->sourceLines,
             $this->config->headingIds, $this->config->mode, $this->config->sections,
             $this->config->rawHtml, $this->config->urlPolicy, $extensions, $writers,
