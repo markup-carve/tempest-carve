@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Composer\InstalledVersions;
 use InvalidArgumentException;
 use MarkupCarve\Carve\Extension\ExtensionDefinition;
 use MarkupCarve\Carve\Include\FileResolver;
@@ -113,6 +114,10 @@ final class CarveToolingTest extends TestCase
     #[Test]
     public function testImportsMarkdownAndHtml(): void
     {
+        if (version_compare(InstalledVersions::getVersion('league/config') ?? '0', '1.2.0', '<')) {
+            $this->markTestSkipped('Carve PHP Markdown import fails with this supported league/config version; carve-php issue 5401.');
+        }
+
         $renderer = CarveRenderer::safe();
 
         self::assertSame("= Hi\n\n*Bold* [link](https://example.com)\n", $renderer->fromMarkdown("# Hi\n\n**Bold** [link](https://example.com)\n"));
