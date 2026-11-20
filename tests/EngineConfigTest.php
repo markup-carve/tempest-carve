@@ -39,6 +39,11 @@ final class EngineConfigTest extends TestCase
         self::assertNotSame('', (new CarveRenderer(extensions: [$factory->create($entry)]))->render('hello'));
     }
 
+    public function testHeadingLevelsDefaultsToOneLevel(): void
+    {
+        self::assertStringContainsString('<h2>Title</h2>', (new CarveRenderer(extensions: [(new ExtensionFactory())->create('heading_levels')]))->render("# Title\n"));
+    }
+
     public function testExternalLinksNofollowOption(): void
     {
         $entry = ['type' => 'external_links', 'nofollow' => true];
