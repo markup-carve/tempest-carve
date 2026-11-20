@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use InvalidArgumentException;
-use MarkupCarve\Carve\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Extension\Navigation;
 use MarkupCarve\Carve\RenderError;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveProfile;
@@ -52,9 +52,6 @@ final class CarveRendererTest extends TestCase
     #[Test]
     public function testRendersAdditionalOutputFormats(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve output writers pending in carve-php issue 5235.');
-        }
         $renderer = CarveRenderer::safe();
         $source = "# Heading\n\n/Emphasis/";
 
@@ -66,9 +63,6 @@ final class CarveRendererTest extends TestCase
     #[Test]
     public function testAlternativeOutputsTreatRawHtmlAsText(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve output writers pending in carve-php issue 5235.');
-        }
         $renderer = CarveRenderer::safe();
         $source = "```=html\n<script>alert(1)</script>\n```";
 
@@ -80,11 +74,7 @@ final class CarveRendererTest extends TestCase
     #[Test]
     public function testExtensionsRemainIsolatedBetweenOutputConverters(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve heading number extension and output writers pending in carve-php issues 5238 and 5235.');
-        }
-        // Placeholder definition until the C2-X document transform hook in carve-php issue 5238.
-        $renderer = CarveRenderer::safe(extensions: [new ExtensionDefinition('tempest.heading-number', '1')]);
+        $renderer = CarveRenderer::safe(extensions: [Navigation::headingNumbers()]);
 
         $firstHtml = $renderer->renderHtml('# Heading');
         $renderer->renderMarkdown('# Heading');
@@ -162,9 +152,6 @@ final class CarveRendererTest extends TestCase
     #[Test]
     public function testCachesEachOutputIndependently(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve text writer pending in carve-php issue 5235.');
-        }
         $adapter = new ArrayAdapter();
         $renderer = CarveRenderer::safe(
             new CarveConfig(cacheEnabled: true),
@@ -233,9 +220,6 @@ final class CarveRendererTest extends TestCase
     #[Test]
     public function testCachingNonSerializableExtensionsAcceptsAnExplicitSalt(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve document transform extensions pending in carve-php issue 5238.');
-        }
         $renderer = CarveRenderer::safe(
             new CarveConfig(cacheEnabled: true, cacheKeySalt: 'custom-v1'),
             new GenericCache(new ArrayAdapter()),

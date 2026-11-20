@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Composer\InstalledVersions;
 use InvalidArgumentException;
 use MarkupCarve\Carve\Extension\ExtensionDefinition;
 use MarkupCarve\Carve\Include\FileResolver;
@@ -55,9 +56,6 @@ final class CarveToolingTest extends TestCase
     #[Test]
     public function testLintJudgesFragmentLinksAgainstTheConfiguredExtensions(): void
     {
-        if (getenv('CARVE_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve lint cannot read headingIds yet; tracked in carve-php issue 5246.');
-        }
         $source = "# Alpha\n\nSee [a](#alpha).\n";
 
         self::assertContains('broken-fragment-link', self::rules(CarveRenderer::safe()->lint($source)));
@@ -116,13 +114,14 @@ final class CarveToolingTest extends TestCase
     #[Test]
     public function testImportsMarkdownAndHtml(): void
     {
-        if (getenv('CARVE_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve Markdown import pending in carve-php issue 5237.');
+        if (version_compare(InstalledVersions::getVersion('league/config') ?? '0', '1.2.0', '<')) {
+            $this->markTestSkipped('Carve PHP Markdown import fails with this supported league/config version; carve-php issue 5401.');
         }
+
         $renderer = CarveRenderer::safe();
 
-        self::assertSame("# Hi\n\n*Bold* [link](https://example.com)\n", $renderer->fromMarkdown("# Hi\n\n**Bold** [link](https://example.com)\n"));
-        self::assertSame("# Hi\n\n*Bold*\n", $renderer->fromHtml('<h1>Hi</h1><p><strong>Bold</strong></p>'));
+        self::assertSame("= Hi\n\n*Bold* [link](https://example.com)\n", $renderer->fromMarkdown("# Hi\n\n**Bold** [link](https://example.com)\n"));
+        self::assertSame("= Hi\n\n*Bold*\n", $renderer->fromHtml('<h1>Hi</h1><p><strong>Bold</strong></p>'));
     }
 
     #[Test]
@@ -159,9 +158,6 @@ final class CarveToolingTest extends TestCase
     #[Test]
     public function testConfigEntriesKeepTheCacheApart(): void
     {
-        if (getenv('CARVE_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve inline wiki renderer pending in carve-php issue 5243.');
-        }
         $factory = new ExtensionFactory();
         $cache = new GenericCache(new ArrayAdapter());
         $config = new CarveConfig(cacheEnabled: true);
@@ -171,8 +167,8 @@ final class CarveToolingTest extends TestCase
         $a = new CarveRenderer($config, $cache, [$factory->create($first)], extensionKeys: [0 => (string)$factory->fingerprint($first)]);
         $b = new CarveRenderer($config, $cache, [$factory->create($second)], extensionKeys: [0 => (string)$factory->fingerprint($second)]);
 
-        self::assertStringContainsString('href="/a/tiger"', $a->render('[[Tiger]]'));
-        self::assertStringContainsString('href="/b/tiger"', $b->render('[[Tiger]]'));
+        self::assertStringContainsString('href="/a/tiger"', $a->render(':wiki[Tiger]'));
+        self::assertStringContainsString('href="/b/tiger"', $b->render(':wiki[Tiger]'));
     }
 
     #[Test]
@@ -193,9 +189,7 @@ final class CarveToolingTest extends TestCase
         $html = $renderer->render($source);
         self::assertStringContainsString('<pre><code class="language-php"><span class="hl-keyword">&lt;?php</span>', $html);
         self::assertStringNotContainsString('<b>', $html);
-        // Carve writer registry lacks Markdown until carve-php issue 5235.
-        $this->expectExceptionMessage('Markdown writer not available yet in Carve.');
-        $renderer->renderMarkdown($source);
+        self::assertSame(str_replace('``` php', '```php', $source), $renderer->renderMarkdown($source));
     }
 
     #[Test]
