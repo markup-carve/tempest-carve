@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.5",
-        "markup-carve/carve-php": "dev-next2#14a3fabd4b16069501b8768179a98a447449f36b",
+        "markup-carve/carve-php": "dev-next2#1ce70376fbcb06d4ac40493efd131becaf957f29",
         "tempest/cache": "^3.19",
         "tempest/console": "^3.19",
         "tempest/mapper": "^3.19",
