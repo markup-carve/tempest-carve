@@ -276,18 +276,22 @@ final class CarveRenderer
             if ($output === OutputFormat::Html) {
                 return Carve::render($source, $options);
             }
-            $target = $output === OutputFormat::Plain ? 'plain' : $output->value;
+            $target = $output === OutputFormat::Plain
+                ? ($this->writers->has('text') ? 'text' : 'plain')
+                : $output->value;
             if (!$this->writers->has($target)) {
                 throw new InvalidArgumentException(sprintf('%s writer not available yet in Carve.', ucfirst($target)));
             }
 
+            $writerOptions = $target === 'text' ? $options : [
+                'smartTypography' => $this->config->smartTypography,
+                'urlPolicy' => $this->config->urlPolicy,
+            ];
+
             return Carve::writeTo($target, Carve::parse($source, [
                 'extensions' => $this->extensions,
                 'headingIds' => $this->config->headingIds,
-            ]), [
-                'smartTypography' => $this->config->smartTypography,
-                'urlPolicy' => $this->config->urlPolicy,
-            ], $this->writers);
+            ]), $writerOptions, $this->writers);
         };
         if (!$this->config->cacheEnabled || $this->cache === null) {
             return $render();

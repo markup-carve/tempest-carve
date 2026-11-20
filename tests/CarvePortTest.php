@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests;
 
 use MarkupCarve\Carve\Include\IncludeResolver;
+use MarkupCarve\Carve\Node;
+use MarkupCarve\Carve\Output\OutputWriter;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveRenderer;
 use MarkupCarve\Tempest\ExtensionFactory;
@@ -25,6 +27,24 @@ final class CarvePortTest extends TestCase
         );
         self::assertStringNotContainsString('<script>', $renderer->render("```=html\n<script>x</script>\n```\n"));
         self::assertStringContainsString('href=""', $renderer->render('[x](javascript:alert(1))'));
+    }
+
+    #[Test]
+    public function testConfiguredTextWriterStillOverridesPlainOutput(): void
+    {
+        $writer = new class implements OutputWriter {
+            public function target(): string
+            {
+                return 'text';
+            }
+
+            public function write(Node $tree, array $options = []): string
+            {
+                return (string)count($tree->children ?? []);
+            }
+        };
+        $renderer = CarveRenderer::safe(new CarveConfig(writers: [$writer]));
+        self::assertSame('2', $renderer->renderPlainText("a\n\nb\n"));
     }
 
     #[Test]
