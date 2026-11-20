@@ -64,6 +64,17 @@ final class EngineConfigTest extends TestCase
         self::assertStringContainsString('class="note"', (new CarveRenderer(extensions: [$factory->create($entry)]))->render('hello'));
     }
 
+    public function testDocumentTransformsFollowConfigurationOrder(): void
+    {
+        $factory = new ExtensionFactory();
+        $defaults = $factory->create(['type' => 'default_attributes', 'defaults' => ['link' => ['class' => 'marked']]]);
+        $permalinks = $factory->create('heading_permalinks');
+        $before = (new CarveRenderer(extensions: [$defaults, $permalinks]))->render("# Hello\n");
+        $after = (new CarveRenderer(extensions: [$permalinks, $defaults]))->render("# Hello\n");
+        self::assertStringNotContainsString('permalink marked', $before);
+        self::assertStringContainsString('permalink marked', $after);
+    }
+
     public function testWikiOptionsAndPlantumlAlias(): void
     {
         $factory = new ExtensionFactory();
