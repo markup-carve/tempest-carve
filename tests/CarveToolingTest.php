@@ -117,6 +117,10 @@ final class CarveToolingTest extends TestCase
 
         self::assertSame("= Hi\n\n*Bold* [link](https://example.com)\n", $renderer->fromMarkdown("# Hi\n\n**Bold** [link](https://example.com)\n"));
         self::assertSame("= Hi\n\n*Bold*\n", $renderer->fromHtml('<h1>Hi</h1><p><strong>Bold</strong></p>'));
+        self::assertSame(
+            "|= a |={>} b |\n| 1 | 2 |\n\n- [x] done\n",
+            $renderer->fromMarkdown("| a | b |\n|---|--:|\n| 1 | 2 |\n\n- [x] done\n"),
+        );
     }
 
     #[Test]

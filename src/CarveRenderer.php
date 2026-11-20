@@ -265,9 +265,12 @@ final class CarveRenderer
         return Carve::format($source, ['alignTables' => $alignTables, 'extensions' => $this->extensions]);
     }
 
+    /**
+     * Reads GitHub Flavored Markdown, as the 0.1 importer did; the engine's `markdown` format is CommonMark only.
+     */
     public function fromMarkdown(string $source): string
     {
-        return Carve::importDocument($source, ['from' => 'markdown'])->source;
+        return Carve::importDocument($source, ['from' => 'gfm'])->source;
     }
 
     public function fromHtml(string $source): string
