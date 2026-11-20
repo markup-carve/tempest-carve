@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace MarkupCarve\Tempest;
 
+use Closure;
 use InvalidArgumentException;
 use MarkupCarve\Carve\Extension\Claim;
 use MarkupCarve\Carve\Extension\ExtensionDefinition;
 use MarkupCarve\Carve\Extension\ExtensionProvider;
 use MarkupCarve\Carve\Extension\RenderHost;
 use MarkupCarve\Carve\Extension\Tabs;
+use MarkupCarve\Carve\Extension\Wikilinks;
 use MarkupCarve\Carve\Node;
 use MarkupCarve\Tempest\Highlight\TempestHighlightExtension;
 
@@ -42,6 +44,22 @@ final class ExtensionFactory
                     return Tabs::extensions(true);
                 }
             };
+        }
+        if ($type === 'wikilinks') {
+            $this->only($config, ['url_template', 'url_generator'], $type);
+            $template = $config['url_template'] ?? null;
+            $generator = $config['url_generator'] ?? null;
+            if ($template !== null && !is_string($template)) {
+                throw new InvalidArgumentException('The wiki URL template must be a string.');
+            }
+            if ($generator !== null && !$generator instanceof Closure) {
+                throw new InvalidArgumentException('The wiki URL generator must be a closure.');
+            }
+            if ($generator === null && $template !== null) {
+                $generator = static fn (string $page): string => str_replace('{page}', Wikilinks::slug($page), $template);
+            }
+
+            return Wikilinks::bundle($generator);
         }
         if ($type === 'mermaid' || $type === 'plantuml' || $type === 'fenced_render') {
             $this->only($config, ['language'], $type);

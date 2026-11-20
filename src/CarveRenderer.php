@@ -125,8 +125,8 @@ final class CarveRenderer
             throw new InvalidArgumentException('No Carve include resolver is configured.');
         }
         $options ??= new IncludeOptions();
-        if ($options->resolverCallLimit !== 1000 || $options->warningLimit !== 100) {
-            throw new InvalidArgumentException('Carve does not expose include resolver-call or warning limits yet.');
+        if ($options->resolverCallLimit !== 1000) {
+            throw new InvalidArgumentException('Carve has no separate include resolver-call limit.');
         }
         $resolverKeyBefore = $this->includeResolver instanceof IncludeCacheKeyProvider
             ? $this->includeResolver->includeCacheKey([])
@@ -138,6 +138,7 @@ final class CarveRenderer
             'resolver' => $resolver,
             'file' => $options->currentPath,
             'depth' => $options->depthLimit,
+            'maxDiagnostics' => $options->warningLimit,
         ];
         if ($options->byteBudget !== null) {
             $engineOptions['includes']['bytes'] = $options->byteBudget;
@@ -181,7 +182,7 @@ final class CarveRenderer
                 [...$parsed->diagnostics, ...$renderResult->diagnostics],
             )),
             $dependencies,
-            null,
+            $parsed->suppressedDiagnostics + $renderResult->suppressedDiagnostics,
         );
     }
 
@@ -224,6 +225,7 @@ final class CarveRenderer
     {
         return $this->lintFindings(Carve::lint($source, [
             'extensions' => $this->extensions,
+            'headingIds' => $this->config->headingIds,
         ]), $source);
     }
 
@@ -259,7 +261,7 @@ final class CarveRenderer
 
     public function fromMarkdown(string $source): string
     {
-        throw new InvalidArgumentException('Markdown importer not available yet in Carve.');
+        return Carve::importDocument($source, ['from' => 'markdown'])->source;
     }
 
     public function fromHtml(string $source): string
@@ -274,7 +276,7 @@ final class CarveRenderer
             if ($output === OutputFormat::Html) {
                 return Carve::render($source, $options);
             }
-            $target = $output === OutputFormat::Plain ? 'text' : $output->value;
+            $target = $output === OutputFormat::Plain ? 'plain' : $output->value;
             if (!$this->writers->has($target)) {
                 throw new InvalidArgumentException(sprintf('%s writer not available yet in Carve.', ucfirst($target)));
             }
@@ -282,7 +284,10 @@ final class CarveRenderer
             return Carve::writeTo($target, Carve::parse($source, [
                 'extensions' => $this->extensions,
                 'headingIds' => $this->config->headingIds,
-            ]), $options, $this->writers);
+            ]), [
+                'smartTypography' => $this->config->smartTypography,
+                'urlPolicy' => $this->config->urlPolicy,
+            ], $this->writers);
         };
         if (!$this->config->cacheEnabled || $this->cache === null) {
             return $render();

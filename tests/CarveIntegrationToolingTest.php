@@ -24,9 +24,8 @@ final class CarveIntegrationToolingTest extends IntegrationTestCase
             ->assertSuccess()
             ->assertContains('<h1>Title</h1>');
         $this->console->call('carve:render ' . $this->files . '/table.crv --format=markdown')
-            // Carve writer registry does not have the Markdown target yet (carve-php issue 5235).
-            ->assertError()
-            ->assertContains('Markdown writer not available yet');
+            ->assertSuccess()
+            ->assertContains('Title');
         $this->console->call('carve:render ' . $this->files . '/table.crv --format=pdf')
             ->assertError()
             ->assertContains('Unknown format [pdf]');
@@ -107,27 +106,23 @@ final class CarveIntegrationToolingTest extends IntegrationTestCase
     public function testConvertCommandImportsMarkdownAndHtml(): void
     {
         $this->console->call('carve:convert ' . $this->files . '/page.md')
-            // Carve Markdown import awaits carve-php issue 5237.
-            ->assertError()
-            ->assertContains('Markdown importer not available yet');
+            ->assertSuccess()
+            ->assertContains('*Bold*');
         $this->console->call('carve:convert ' . $this->files . '/page.html')
             ->assertSuccess()
             ->assertContains('*Bold*');
         $this->console->call('carve:convert ' . $this->files . '/table.crv')
             ->assertInvalid()
             ->assertContains('Cannot tell the input format');
-        $this->console->call('carve:convert ' . $this->files . '/table.crv --from=markdown')->assertError();
+        $this->console->call('carve:convert ' . $this->files . '/table.crv --from=markdown')->assertSuccess();
     }
 
     #[Test]
     public function testCommandsUseTheConfiguredRenderer(): void
     {
-        if (getenv('CARVE2_ENABLE_PENDING_TESTS') !== '1') {
-            $this->markTestSkipped('Carve inline wiki renderer pending in carve-php issue 5243.');
-        }
         $this->container->config(new CarveConfig(extensions: [['type' => 'wikilinks', 'url_template' => '/w/{page}']]));
         $file = sys_get_temp_dir() . '/tempest-carve-wiki-' . bin2hex(random_bytes(6)) . '.crv';
-        file_put_contents($file, "[[Tiger Facts]]\n");
+        file_put_contents($file, ":wiki[Tiger Facts]\n");
 
         $this->console->call('carve:render ' . $file)
             ->assertSuccess()

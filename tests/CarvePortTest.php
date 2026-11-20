@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use InvalidArgumentException;
 use MarkupCarve\Carve\Include\IncludeResolver;
-use MarkupCarve\Carve\Node;
-use MarkupCarve\Carve\Output\OutputWriter;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveRenderer;
 use MarkupCarve\Tempest\ExtensionFactory;
+use MarkupCarve\Tempest\IncludeOptions;
 use MarkupCarve\Tempest\Validation\ValidCarve;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -30,35 +28,12 @@ final class CarvePortTest extends TestCase
     }
 
     #[Test]
-    public function testUsesARegisteredCarveWriter(): void
+    public function testStandardOutputWritersAreAvailable(): void
     {
-        $writer = new class implements OutputWriter {
-            public function target(): string
-            {
-                return 'text';
-            }
-
-            public function write(Node $tree, array $options = []): string
-            {
-                return (string)count($tree->children ?? []);
-            }
-        };
-        $renderer = CarveRenderer::safe(new CarveConfig(writers: [$writer]));
-        self::assertSame('2', $renderer->renderPlainText("a\n\nb\n"));
-    }
-
-    #[Test]
-    public function testUnregisteredWriterReportsItsGap(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Markdown writer not available yet in Carve.');
-        CarveRenderer::safe()->renderMarkdown('text');
-    }
-
-    #[Test]
-    public function testPendingWritersAreNamedSkips(): void
-    {
-        $this->markTestSkipped('Carve text, Markdown, and ANSI writers pending in carve-php issue 5235.');
+        $renderer = CarveRenderer::safe();
+        self::assertSame("a\n\nb\n", $renderer->renderPlainText("a\n\nb\n"));
+        self::assertSame("a\n", $renderer->renderMarkdown("a\n"));
+        self::assertStringContainsString('a', $renderer->renderAnsi("a\n"));
     }
 
     #[Test]
@@ -118,14 +93,26 @@ final class CarvePortTest extends TestCase
     }
 
     #[Test]
-    public function testPendingInlineWikiExtensionIsNamedSkip(): void
+    public function testInlineWikiExtensionRendersLinks(): void
     {
-        $this->markTestSkipped('Carve inline wiki rendering pending in carve-php issue 5243.');
+        $extension = (new ExtensionFactory())->create(['type' => 'wikilinks', 'url_template' => '/w/{page}']);
+        self::assertStringContainsString('href="/w/tiger"', CarveRenderer::safe(extensions: [$extension])->render(':wiki[Tiger]'));
     }
 
     #[Test]
-    public function testPendingIncludeLimitsAreNamedSkip(): void
+    public function testIncludeCallLimitIsAvailable(): void
     {
-        $this->markTestSkipped('Carve include call and diagnostic limits pending in carve-php issue 5244.');
+        $resolver = new class implements IncludeResolver {
+            public function resolve(array $request): array
+            {
+                return $request['path'] === 'resolved'
+                    ? ['text' => 'ok', 'id' => 'resolved']
+                    : ['error' => 'not_found'];
+            }
+        };
+        $renderer = CarveRenderer::safe(includeResolver: $resolver);
+        $result = $renderer->renderIncluded("{{ a }}\n\n{{ b }}", new IncludeOptions(warningLimit: 1));
+        self::assertCount(1, array_filter($result->warnings, static fn (array $warning): bool => $warning['code'] === 'include-not-found'));
+        self::assertGreaterThanOrEqual(1, $result->suppressedWarnings);
     }
 }
