@@ -22,7 +22,8 @@
     ],
     "require": {
         "php": "^8.5",
-        "markup-carve/carve-php": "dev-next2#6ceebc52181efc1f5dfe6f5e7964b75c43f13a90",
+        "markup-carve/carve-php": "dev-main#6ceebc52181efc1f5dfe6f5e7964b75c43f13a90",
+        "league/commonmark": "^2.9.2",
         "tempest/cache": "^3.19",
         "tempest/console": "^3.19",
         "tempest/mapper": "^3.19",
@@ -30,7 +31,7 @@
         "tempest/view": "^3.19"
     },
     "require-dev": {
-        "markup-carve/tempest-highlight-carve": "dev-next2#12d47e5e6661ecd6e00205687b4984908c6b2c18",
+        "markup-carve/tempest-highlight-carve": "dev-main#12d47e5e6661ecd6e00205687b4984908c6b2c18",
         "php-collective/code-sniffer": "^0.6.8",
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5",
