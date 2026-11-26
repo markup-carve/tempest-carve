@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Tests;
 
 use InvalidArgumentException;
-use MarkupCarve\Carve\Exception\RenderLossException;
-use MarkupCarve\Carve\Extension\HeadingNumbersExtension;
-use MarkupCarve\Carve\Renderer\SmartTypographyMode;
-use MarkupCarve\Carve\Renderer\SoftBreakMode;
+use MarkupCarve\Carve\Extension\Navigation;
+use MarkupCarve\Carve\RenderError;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveProfile;
 use MarkupCarve\Tempest\CarveRenderer;
@@ -18,7 +16,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Tempest\Cache\GenericCache;
 use Tests\Fixtures\DatabaseIncludeResolver;
-use Tests\Fixtures\NonSerializableExtension;
+use Tests\Fixtures\NonSerializableCarveExtension;
 use UnexpectedValueException;
 
 final class CarveRendererTest extends TestCase
@@ -76,7 +74,7 @@ final class CarveRendererTest extends TestCase
     #[Test]
     public function testExtensionsRemainIsolatedBetweenOutputConverters(): void
     {
-        $renderer = CarveRenderer::safe(extensions: [new HeadingNumbersExtension()]);
+        $renderer = CarveRenderer::safe(extensions: [Navigation::headingNumbers()]);
 
         $firstHtml = $renderer->renderHtml('# Heading');
         $renderer->renderMarkdown('# Heading');
@@ -89,27 +87,25 @@ final class CarveRendererTest extends TestCase
     #[Test]
     public function testAppliesRenderingConfiguration(): void
     {
+        // C2-H-131 and C2-H-121 replace the old renderer enums with option values.
         $renderer = CarveRenderer::safe(new CarveConfig(
-            softBreakMode: SoftBreakMode::Space,
-            smartTypography: SmartTypographyMode::Source,
+            smartTypography: false,
             sourceLines: true,
         ));
 
         $html = $renderer->render("# Heading\n\nOne\ntwo -- ...");
 
         self::assertStringContainsString('<h1 data-source-line="1">Heading</h1>', $html);
-        self::assertStringContainsString('<p data-source-line="3">One two -- ...</p>', $html);
-        self::assertSame("One two\n", $renderer->renderMarkdown("One\ntwo"));
-        self::assertSame("One two\n", $renderer->renderPlainText("One\ntwo"));
-        self::assertSame("One two\n", $renderer->renderAnsi("One\ntwo"));
+        self::assertStringContainsString("<p data-source-line=\"3\">One\ntwo -- ...</p>", $html);
     }
 
     #[Test]
     public function testReturnsDiagnosticsAndProfileViolations(): void
     {
-        $warnings = CarveRenderer::safe()->renderWithReport('[text][missing]');
+        // C2-N-083 reports unresolved includes in the parse channel.
+        $warnings = CarveRenderer::safe()->renderWithReport('{{ missing }}');
 
-        self::assertSame('reference', $warnings->warnings[0]['category']);
+        self::assertSame('include', $warnings->warnings[0]['category']);
         self::assertSame(1, $warnings->warnings[0]['line']);
 
         $losses = CarveRenderer::safe()->renderWithReport("```=latex\n\\textbf{x}\n```");
@@ -147,7 +143,8 @@ final class CarveRendererTest extends TestCase
     #[Test]
     public function testStrictLossesRejectsADeniedDestination(): void
     {
-        $this->expectException(RenderLossException::class);
+        // C2-T-040 names Carve's strict render error.
+        $this->expectException(RenderError::class);
 
         CarveRenderer::safe()->renderWithReport('[x](javascript:alert(1))', strictLosses: true);
     }
@@ -177,18 +174,15 @@ final class CarveRendererTest extends TestCase
         CarveRenderer::safe(new CarveConfig(cacheEnabled: true), $cache)->render('# Heading');
         CarveRenderer::safe(new CarveConfig(cacheEnabled: true, sourceLines: true), $cache)->render('# Heading');
         CarveRenderer::safe(new CarveConfig(
-            smartTypography: SmartTypographyMode::Source,
+            smartTypography: false,
             cacheEnabled: true,
         ), $cache)->render('# Heading');
         CarveRenderer::safe(new CarveConfig(
             profile: CarveProfile::Article,
             cacheEnabled: true,
         ), $cache)->render('# Heading');
-        CarveRenderer::safe(
-            new CarveConfig(cacheEnabled: true),
-            $cache,
-            [new HeadingNumbersExtension(minLevel: 2)],
-        )->render('# Heading');
+        // C2-H-131 replaces heading id extensions with the headingIds option.
+        CarveRenderer::safe(new CarveConfig(headingIds: 'lower', cacheEnabled: true), $cache)->render('# Heading');
 
         self::assertCount(5, $adapter->getValues());
     }
@@ -219,7 +213,7 @@ final class CarveRendererTest extends TestCase
         CarveRenderer::safe(
             new CarveConfig(cacheEnabled: true),
             new GenericCache(new ArrayAdapter()),
-            [new NonSerializableExtension()],
+            [new NonSerializableCarveExtension()],
         );
     }
 
@@ -229,7 +223,7 @@ final class CarveRendererTest extends TestCase
         $renderer = CarveRenderer::safe(
             new CarveConfig(cacheEnabled: true, cacheKeySalt: 'custom-v1'),
             new GenericCache(new ArrayAdapter()),
-            [new NonSerializableExtension()],
+            [new NonSerializableCarveExtension()],
         );
 
         self::assertStringContainsString('<em>cached</em>', $renderer->render('/cached/'));
@@ -267,6 +261,7 @@ final class CarveRendererTest extends TestCase
             ['target' => 'missing', 'resolved' => false],
         ], $result->dependencies);
         self::assertSame('include', $result->warnings[0]['category']);
+        self::assertIsString($result->warnings[0]['message']);
         self::assertStringContainsString('missing', $result->warnings[0]['message']);
     }
 
@@ -331,7 +326,8 @@ final class CarveRendererTest extends TestCase
 
         $result = $renderer->renderIncluded('{{ chapter }}', profile: CarveProfile::Comment);
 
-        self::assertStringContainsString('<p># Database chapter</p>', $result->html);
+        // C2-N-077 degrades an include directive under the comment profile even after expansion.
+        self::assertStringContainsString('<p>{{ chapter }}</p>', $result->html);
     }
 
     #[Test]

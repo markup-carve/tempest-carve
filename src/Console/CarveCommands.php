@@ -6,7 +6,7 @@ namespace MarkupCarve\Tempest\Console;
 
 use FilesystemIterator;
 use InvalidArgumentException;
-use MarkupCarve\Carve\Transform\FilesystemIncludeResolver;
+use MarkupCarve\Carve\Include\FileResolver;
 use MarkupCarve\Tempest\CarveRenderer;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -137,7 +137,7 @@ final readonly class CarveCommands
     public function convert(
         #[ConsoleArgument(description: 'The Markdown or HTML file to convert')]
         string $path,
-        #[ConsoleArgument(description: 'markdown or html (guessed from the file extension)')]
+        #[ConsoleArgument(description: 'markdown (GitHub Flavored), gfm or html (guessed from the file extension)')]
         ?string $from = null,
         #[ConsoleArgument(description: 'Write to this file instead of the console')]
         ?string $output = null,
@@ -152,11 +152,17 @@ final readonly class CarveCommands
             'html', 'htm' => 'html',
             default => null,
         };
-        $converted = match ($from) {
-            'markdown', 'md' => $this->carve->fromMarkdown($source),
-            'html' => $this->carve->fromHtml($source),
-            default => null,
-        };
+        try {
+            $converted = match ($from) {
+                'markdown', 'md', 'gfm' => $this->carve->fromMarkdown($source),
+                'html' => $this->carve->fromHtml($source),
+                default => null,
+            };
+        } catch (Throwable $exception) {
+            $this->console->error($exception->getMessage());
+
+            return ExitCode::ERROR;
+        }
         if ($converted === null) {
             $this->console->error('Cannot tell the input format. Pass --from=markdown or --from=html.');
 
@@ -174,7 +180,7 @@ final readonly class CarveCommands
     {
         $missing = false;
         $rows = [];
-        $resolver = $includeRoot === null ? null : new FilesystemIncludeResolver($includeRoot);
+        $resolver = $includeRoot === null ? null : FileResolver::forRoot($includeRoot);
         foreach ($this->files($paths, $missing) as $file) {
             $source = $this->read($file);
             if ($source === null) {

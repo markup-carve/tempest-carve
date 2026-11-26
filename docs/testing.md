@@ -1,15 +1,12 @@
 # Testing
 
-Install dependencies and run the integration suite:
+Install the pinned Carve dependency and run the package checks:
 
 ```sh
-composer install
+composer update
 composer check
 ```
 
-The full check runs coding standards, PHPStan at level 9, and the test suite.
-The suite boots Tempest, exercises package discovery through a real view,
-verifies Carve HTML output, and confirms that safe mode escapes a raw script
-block. Unit coverage also exercises every output format, named profiles,
-diagnostics, render-loss reporting, source-line annotations, configured
-extensions, and cache-key separation.
+The test suite boots Tempest, renders the component, and checks the 0.2 HTML, diagnostics, includes, formatting, import, validation, cache, and writer registration paths. Extension tests cover named bundles and document transforms.
+
+Composer validation on this branch reports its expected warning for the development commit pin. CI runs schema validation without `--strict` so the pin remains at the exact reviewed engine commit.

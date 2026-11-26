@@ -4,21 +4,15 @@ declare(strict_types=1);
 
 namespace MarkupCarve\Tempest\Highlight;
 
-use MarkupCarve\Carve\CarveConverter;
-use MarkupCarve\Carve\Event\RenderEvent;
-use MarkupCarve\Carve\Extension\ExtensionInterface;
-use MarkupCarve\Carve\Node\Block\CodeBlock;
-use MarkupCarve\Carve\Renderer\HtmlRenderer;
+use MarkupCarve\Carve\Extension\Claim;
+use MarkupCarve\Carve\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Extension\ExtensionProvider;
+use MarkupCarve\Carve\Extension\RenderHost;
+use MarkupCarve\Carve\Node;
 use MarkupCarve\TempestHighlight\CarveLanguage;
 use Tempest\Highlight\Highlighter;
 
-/**
- * Highlights fenced code in HTML output with tempest/highlight.
- *
- * Fences in a language the highlighter does not know, and fences carrying
- * attributes or a label, keep the engine's default markup.
- */
-final class TempestHighlightExtension implements ExtensionInterface
+final class TempestHighlightExtension implements ExtensionProvider
 {
     private ?Highlighter $highlighter;
 
@@ -27,31 +21,44 @@ final class TempestHighlightExtension implements ExtensionInterface
         $this->highlighter = $highlighter;
     }
 
-    public function register(CarveConverter $converter): void
+    public function definitions(): array
     {
-        if (!$converter->getRenderer() instanceof HtmlRenderer) {
-            return;
+        $definitions = [];
+        foreach (array_unique($this->highlighter()->getSupportedLanguageNames()) as $language) {
+            $language = strtolower($language);
+            if (preg_match('/^[a-z][a-z0-9_-]*$/', $language) !== 1) {
+                continue;
+            }
+            $definitions[] = new ExtensionDefinition(
+                'tempest.highlight.' . $language,
+                '1',
+                matcher: ['form' => 'fence', 'name' => $language],
+                transform: static function (Claim $claim) use ($language): ?Node {
+                    if (($claim->node->f['attrs'] ?? []) !== [] || ($claim->node->f['title'] ?? null) !== null) {
+                        return null;
+                    }
+                    $node = new Node('block_extension', []);
+                    $node->f = [
+                        'name' => 'tempest.highlight.' . $language,
+                        'version' => '1',
+                        'props' => ['language' => $language, 'code' => $claim->source['body'] ?? ''],
+                        'source' => $claim->source,
+                        'fallback' => [$claim->copyNode()],
+                    ];
+
+                    return $node;
+                },
+                renderer: function (Node $node, RenderHost $host) use ($language): string {
+                    $props = $node->f['props'] ?? null;
+                    $code = is_array($props) && is_string($props['code'] ?? null) ? $props['code'] : '';
+                    $highlighted = $this->highlighter()->parse($code, $language);
+
+                    return sprintf('<pre><code class="language-%s">%s</code></pre>', RenderHost::escapeAttribute($language), $highlighted);
+                },
+            );
         }
-        $converter->on('render.code_block', function (RenderEvent $event): void {
-            $node = $event->getNode();
-            if (!$node instanceof CodeBlock || $node->getAttributes() !== [] || $node->getLabel() !== null) {
-                return;
-            }
-            $language = $node->getLanguage();
-            if ($language === null) {
-                return;
-            }
-            $highlighter = $this->highlighter();
-            if (!in_array(strtolower($language), $highlighter->getSupportedLanguageNames(), true)) {
-                return;
-            }
-            $code = $highlighter->parse($node->getContent(), strtolower($language));
-            $event->setHtml(sprintf(
-                "<pre><code class=\"language-%s\">%s</code></pre>\n",
-                htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5),
-                $code,
-            ));
-        });
+
+        return $definitions;
     }
 
     private function highlighter(): Highlighter

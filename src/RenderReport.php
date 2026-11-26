@@ -8,8 +8,8 @@ final readonly class RenderReport
 {
     /**
      * @param string $html
-     * @param list<array{message: string, line: int, column: int, category: string|null, suggestion: string|null}> $warnings
-     * @param list<array{nodeType: string, reason: string, reasonDescription: string|null}> $profileViolations
+     * @param list<array<string, mixed>> $warnings
+     * @param list<array<string, mixed>> $profileViolations
      * @param list<array<string, mixed>> $losses
      * @param bool $lossesTruncated
      * @param int $totalLosses
