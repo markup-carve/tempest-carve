@@ -393,8 +393,9 @@ final class CarveRenderer
         foreach ($this->extensions as $extension) {
             if ($extension instanceof TempestHighlightExtension) {
                 $options['codeBlockRenderer'] = $extension->renderCodeBlock(...);
-
-                break;
+            }
+            if ($extension instanceof HeadingShiftExtension) {
+                $options['headingShift'] = min(5, ($options['headingShift'] ?? 0) + $extension->shift);
             }
         }
 
