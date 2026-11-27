@@ -44,6 +44,17 @@ final class EngineConfigTest extends TestCase
         self::assertStringContainsString('<h2>Title</h2>', (new CarveRenderer(extensions: [(new ExtensionFactory())->create('heading_levels')]))->render("# Title\n"));
     }
 
+    public function testHeadingLevelEntriesUseTheCurrentEngineOption(): void
+    {
+        $factory = new ExtensionFactory();
+        $offset = $factory->create(['type' => 'heading_levels', 'offset' => 2]);
+        $shift = $factory->create(['type' => 'heading_level_shift', 'shift' => 2]);
+
+        self::assertStringContainsString('<h3>Title</h3>', (new CarveRenderer(extensions: [$offset]))->render("# Title\n"));
+        self::assertStringContainsString('<h3>Title</h3>', (new CarveRenderer(extensions: [$shift]))->render("# Title\n"));
+        self::assertSame("### Title\n", (new CarveRenderer(extensions: [$shift]))->renderMarkdown("# Title\n"));
+    }
+
     public function testExternalLinksNofollowOption(): void
     {
         $entry = ['type' => 'external_links', 'nofollow' => true];
