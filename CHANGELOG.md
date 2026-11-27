@@ -7,19 +7,22 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-27
+
 ### Breaking
 
-- Rename the Carve 0.2 engine imports to `MarkupCarve\Carve\Carve` and pin the renamed engine at `db1624daf9`. Remove temporary `Carve2` names and 0.1 code paths.
+- Requires carve-php 0.2. Carve source follows the 0.2 syntax and HTML follows the 0.2 renderer; bundled fixtures use canonical 0.2 syntax (#24).
+- Options use the Carve 0.2 names for profiles, heading ids, mode, smart typography, raw HTML and URL policy (#24).
+- The engine classes are `MarkupCarve\Carve\Carve` and friends; the temporary `Carve2` names and the 0.1 code paths are gone (#25).
 
-### Changed
+### Improvements
 
-- Port Tempest rendering, includes, lint, formatting, HTML import, validation, and extensions to the pinned Carve2 engine on the `next2` branch.
-- Use Carve2 option names for profiles, heading ids, mode, smart typography, raw HTML, and URL policy.
-- Convert bundled Carve fixtures to canonical 0.2 syntax.
-
-### Pending
-
-- Markdown, text, and ANSI output methods need registered Carve2 writers. Markdown import and some 0.1 extensions await 0.2 engine support.
+- Rendering, includes, lint, formatting, HTML import, validation and extensions run on carve-php 0.2 (#24).
+- Markdown, text and ANSI output use the engine's built-in writers, and heading numbers, wiki links, lint and include diagnostics use the engine's APIs (#27).
+- `fromMarkdown()` and `carve:convert --from=markdown` read GitHub Flavored Markdown again, so tables, task lists and strikethrough convert; `--from=gfm` is accepted too (#31).
+- Named Carve 0.2 extension bundles are available through a checked factory registry; `wikilinks` takes its class and window options, `plantuml` accepts `puml`, and `softBreakMode` reaches the engine (#30).
+- The render cache key includes the installed carve-php commit, so an engine update no longer serves stale HTML (#33).
+- `composer.json` requires `league/commonmark`, which the Markdown import needs (#36).
 
 ## [0.1.3] - 2026-11-12
 
