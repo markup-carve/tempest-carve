@@ -22,8 +22,8 @@
     ],
     "require": {
         "php": "^8.5",
-        "markup-carve/carve-php": "dev-main#6ceebc52181efc1f5dfe6f5e7964b75c43f13a90",
         "league/commonmark": "^2.9.2",
+        "markup-carve/carve-php": "dev-main#8767d7fcacbba18b7a50ee94cbed5603ead85956",
         "tempest/cache": "^3.19",
         "tempest/console": "^3.19",
         "tempest/mapper": "^3.19",

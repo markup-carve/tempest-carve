@@ -222,6 +222,48 @@ final class CarveToolingTest extends TestCase
         self::assertStringContainsString('<span class="hl-', $titled);
     }
 
+    #[Test]
+    public function testCodeLineOptionsNumberAndHighlightPlainAndCaptionedBlocks(): void
+    {
+        $renderer = CarveRenderer::safe(extensions: [new TempestHighlightExtension()]);
+        $plain = $renderer->render("{.line-numbers data-line-start=42 data-highlight=1,3-5}\n```php\n\$a = 1;\n\$b = 2;\n```\n");
+        self::assertStringContainsString('<span class="hl-gutter">42</span>', $plain);
+        self::assertStringContainsString('<span class="hl-gutter">43</span>', $plain);
+        self::assertSame(1, substr_count($plain, 'class="hl-line-highlighted"'));
+        self::assertStringContainsString('class="hl-variable"', $plain);
+
+        $captioned = $renderer->render("{.line-numbers data-line-start=7 data-highlight=2}\n```php\n\$a = 1;\n\$b = 2;\n```\n^ The app.\n");
+        self::assertStringContainsString('<figure>', $captioned);
+        self::assertStringContainsString('<pre class="line-numbers" data-line-start="7" data-highlight="2">', $captioned);
+        self::assertStringContainsString('<figcaption>The app.</figcaption>', $captioned);
+        self::assertStringContainsString('<span class="hl-gutter">8</span>', $captioned);
+        self::assertSame(1, substr_count($captioned, 'class="hl-line-highlighted"'));
+    }
+
+    #[Test]
+    public function testInvalidCodeLineOptionsFallBackAndKeepTokenSpans(): void
+    {
+        $renderer = CarveRenderer::safe(extensions: [new TempestHighlightExtension()]);
+        $invalid = $renderer->render("{.line-numbers data-line-start=auto data-highlight=\"1, 2\"}\n```php\n\$a = 1;\n\$b = 2;\n```\n");
+        self::assertStringContainsString('<span class="hl-gutter">1</span>', $invalid);
+        self::assertStringNotContainsString('hl-line-highlighted', $invalid);
+
+        $multiline = $renderer->render("{data-highlight=2}\n```php\n/* a\nb */\n```\n");
+        self::assertStringContainsString('<span class="hl-comment">/* a</span>', $multiline);
+        self::assertStringContainsString('<span class="hl-comment">b */</span>', $multiline);
+        self::assertSame(1, substr_count($multiline, 'class="hl-line-highlighted"'));
+    }
+
+    #[Test]
+    public function testLargeLineStartKeepsExactDecimalNumbers(): void
+    {
+        $renderer = CarveRenderer::safe(extensions: [new TempestHighlightExtension()]);
+        $html = $renderer->render("{.line-numbers data-line-start=9223372036854775807}\n```php\na\nb\n```\n");
+
+        self::assertStringContainsString('<span class="hl-gutter">9223372036854775807</span>', $html);
+        self::assertStringContainsString('<span class="hl-gutter">9223372036854775808</span>', $html);
+    }
+
     /**
      * @param list<\MarkupCarve\Tempest\LintFinding> $warnings
      *

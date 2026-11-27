@@ -18,6 +18,7 @@ use MarkupCarve\Carve\Node;
 use MarkupCarve\Carve\Output\WriterRegistry;
 use MarkupCarve\Carve\RenderError;
 use MarkupCarve\Carve\RenderResult;
+use MarkupCarve\Tempest\Highlight\TempestHighlightExtension;
 use MarkupCarve\Tempest\Internal\OutputFormat;
 use Tempest\Cache\Cache;
 use Throwable;
@@ -388,6 +389,13 @@ final class CarveRenderer
         ];
         if ($this->config->urlPolicy !== []) {
             $options['urlPolicy'] = $this->config->urlPolicy;
+        }
+        foreach ($this->extensions as $extension) {
+            if ($extension instanceof TempestHighlightExtension) {
+                $options['codeBlockRenderer'] = $extension->renderCodeBlock(...);
+
+                break;
+            }
         }
 
         return $options;
