@@ -264,6 +264,15 @@ final class CarveToolingTest extends TestCase
         self::assertStringContainsString('<span class="hl-gutter">9223372036854775808</span>', $html);
     }
 
+    #[Test]
+    public function testLeadingZeroHighlightValueSelectsNoLine(): void
+    {
+        $renderer = CarveRenderer::safe(extensions: [new TempestHighlightExtension()]);
+        $html = $renderer->render("{data-highlight=01}\n```php\necho 1;\n```\n");
+
+        self::assertStringNotContainsString('hl-line-highlighted', $html);
+    }
+
     /**
      * @param list<\MarkupCarve\Tempest\LintFinding> $warnings
      *
