@@ -298,6 +298,9 @@ final class CarveRenderer
                 'smartTypography' => $this->config->smartTypography,
                 'urlPolicy' => $this->config->urlPolicy,
             ];
+            if ($target === 'markdown' && isset($options['headingShift'])) {
+                $writerOptions['headingShift'] = $options['headingShift'];
+            }
 
             return Carve::writeTo($target, Carve::parse($source, [
                 'extensions' => $this->extensions,

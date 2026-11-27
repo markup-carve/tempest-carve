@@ -52,6 +52,7 @@ final class EngineConfigTest extends TestCase
 
         self::assertStringContainsString('<h3>Title</h3>', (new CarveRenderer(extensions: [$offset]))->render("# Title\n"));
         self::assertStringContainsString('<h3>Title</h3>', (new CarveRenderer(extensions: [$shift]))->render("# Title\n"));
+        self::assertSame("### Title\n", (new CarveRenderer(extensions: [$shift]))->renderMarkdown("# Title\n"));
     }
 
     public function testExternalLinksNofollowOption(): void
