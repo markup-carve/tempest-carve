@@ -200,12 +200,26 @@ final class CarveToolingTest extends TestCase
     }
 
     #[Test]
-    public function testLeavesUnknownLanguagesAndAttributedFencesAlone(): void
+    public function testLeavesUnknownLanguagesAloneAndHighlightsAttributedFences(): void
     {
         $renderer = CarveRenderer::safe(extensions: [new TempestHighlightExtension()]);
 
         self::assertSame("<pre><code class=\"language-nope\">x&lt;y\n</code></pre>", $renderer->render("``` nope\nx<y\n```\n"));
-        self::assertStringNotContainsString('hl-', $renderer->render("{#snippet}\n``` php\n\$a = 1;\n```\n"));
+        self::assertStringContainsString('hl-', $renderer->render("{#snippet}\n``` php\n\$a = 1;\n```\n"));
+    }
+
+    #[Test]
+    public function testHighlightsCodeWithLineOptionsAndTitle(): void
+    {
+        $renderer = CarveRenderer::safe(extensions: [new TempestHighlightExtension()]);
+        $lineOptions = $renderer->render("{.line-numbers data-line-start=3}\n```php\n\$a = 1;\n```\n");
+        self::assertStringContainsString('class="line-numbers"', $lineOptions);
+        self::assertStringContainsString('data-line-start="3"', $lineOptions);
+        self::assertStringContainsString('<span class="hl-', $lineOptions);
+
+        $titled = $renderer->render("```php \"example.php\"\n\$a = 1;\n```\n");
+        self::assertStringContainsString('<pre title="example.php">', $titled);
+        self::assertStringContainsString('<span class="hl-', $titled);
     }
 
     /**

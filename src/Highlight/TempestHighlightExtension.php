@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace MarkupCarve\Tempest\Highlight;
 
+use MarkupCarve\Carve\Attrs;
 use MarkupCarve\Carve\Extension\Claim;
 use MarkupCarve\Carve\Extension\ExtensionDefinition;
 use MarkupCarve\Carve\Extension\ExtensionProvider;
 use MarkupCarve\Carve\Extension\RenderHost;
 use MarkupCarve\Carve\Node;
+use MarkupCarve\Carve\Resolve\PlainText;
 use MarkupCarve\TempestHighlight\CarveLanguage;
 use Tempest\Highlight\Highlighter;
 
@@ -33,10 +35,7 @@ final class TempestHighlightExtension implements ExtensionProvider
                 'tempest.highlight.' . $language,
                 '1',
                 matcher: ['form' => 'fence', 'name' => $language],
-                transform: static function (Claim $claim) use ($language): ?Node {
-                    if (($claim->node->f['attrs'] ?? []) !== [] || ($claim->node->f['title'] ?? null) !== null) {
-                        return null;
-                    }
+                transform: static function (Claim $claim) use ($language): Node {
                     $node = new Node('block_extension', []);
                     $node->f = [
                         'name' => 'tempest.highlight.' . $language,
@@ -45,6 +44,8 @@ final class TempestHighlightExtension implements ExtensionProvider
                         'source' => $claim->source,
                         'fallback' => [$claim->copyNode()],
                     ];
+                    $node->f['attrs'] = $claim->node->f['attrs'] ?? null;
+                    $node->f['title'] = $claim->node->f['title'] ?? null;
 
                     return $node;
                 },
@@ -52,8 +53,14 @@ final class TempestHighlightExtension implements ExtensionProvider
                     $props = $node->f['props'] ?? null;
                     $code = is_array($props) && is_string($props['code'] ?? null) ? $props['code'] : '';
                     $highlighted = $this->highlighter()->parse($code, $language);
+                    $attrs = $host->attributes($node);
+                    $title = $node->f['title'] ?? null;
+                    $authored = $node->f['attrs'] ?? null;
+                    if (is_array($title) && !($authored instanceof Attrs && $authored->get('title') !== null)) {
+                        $attrs .= ' title="' . RenderHost::escapeAttribute(PlainText::of(PlainText::nodes($title))) . '"';
+                    }
 
-                    return sprintf('<pre><code class="language-%s">%s</code></pre>', RenderHost::escapeAttribute($language), $highlighted);
+                    return sprintf('<pre%s><code class="language-%s">%s</code></pre>', $attrs, RenderHost::escapeAttribute($language), $highlighted);
                 },
             );
         }
