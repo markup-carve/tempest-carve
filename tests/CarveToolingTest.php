@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use InvalidArgumentException;
+use MarkupCarve\Carve\Carve;
 use MarkupCarve\Carve\Extension\ExtensionDefinition;
 use MarkupCarve\Carve\Include\FileResolver;
 use MarkupCarve\Tempest\CarveConfig;
@@ -271,6 +272,16 @@ final class CarveToolingTest extends TestCase
         $html = $renderer->render("{data-highlight=01}\n```php\necho 1;\n```\n");
 
         self::assertStringNotContainsString('hl-line-highlighted', $html);
+    }
+
+    #[Test]
+    public function testHighlightExtensionStillWorksWhenPassedDirectlyToCarve(): void
+    {
+        $html = Carve::toHtml("```php\n\$a = 1;\n```\n", [
+            'extensions' => [new TempestHighlightExtension()],
+        ]);
+
+        self::assertStringContainsString('<span class="hl-variable">$a</span>', $html);
     }
 
     /**

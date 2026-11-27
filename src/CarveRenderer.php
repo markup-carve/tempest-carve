@@ -152,7 +152,7 @@ final class CarveRenderer
             $engineOptions['includes']['bytes'] = $options->byteBudget;
         }
         $parsed = Carve::parseWithDiagnostics($source, [
-            'extensions' => $this->extensions,
+            'extensions' => $this->htmlExtensions(),
             'headingIds' => $this->config->headingIds,
             'includes' => $engineOptions['includes'],
         ]);
@@ -332,7 +332,7 @@ final class CarveRenderer
      */
     private function renderEngine(Node|string $source, array $options): RenderResult
     {
-        [$options['extensions'], $transforms] = self::orderedExtensions(is_array($options['extensions']) ? $options['extensions'] : []);
+        [$options['extensions'], $transforms] = self::orderedExtensions($this->htmlExtensions());
 
         $result = Carve::renderWithDocumentTransforms($source, $transforms, $options);
         if (($options['strictLosses'] ?? false) === true) {
@@ -343,6 +343,19 @@ final class CarveRenderer
         }
 
         return $result;
+    }
+
+    /**
+     * Keep the provider's direct Carve path while this renderer uses the code hook.
+     *
+     * @return list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider>
+     */
+    private function htmlExtensions(): array
+    {
+        return array_values(array_filter(
+            $this->extensions,
+            static fn (ExtensionDefinition|ExtensionProvider $extension): bool => !$extension instanceof TempestHighlightExtension,
+        ));
     }
 
     /**
