@@ -13,6 +13,7 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Register the standard table of contents renderers that carve-php main requires; move carve-php to main.
 - Port Tempest rendering, includes, lint, formatting, HTML import, validation, and extensions to the pinned Carve2 engine on the `next2` branch.
 - Use Carve2 option names for profiles, heading ids, mode, smart typography, raw HTML, and URL policy.
 - Convert bundled Carve fixtures to canonical 0.2 syntax.

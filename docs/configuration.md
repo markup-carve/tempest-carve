@@ -44,8 +44,10 @@ $html = $carve->render($source, CarveProfile::Comment);
 
 `writers` accepts Carve `OutputWriter` instances. The engine ships `html`, `carve`, `text`, `markdown`, and `ansi`. Register custom writers only for additional targets.
 
+`renderers` maps extension names to `'standard'`, a `Closure`, or a supported `['standard' => [option => value]]` map. The adapter registers the standard renderer for `table_of_contents` and `toc_placement` when configured. An entry in `renderers` for the same extension takes precedence.
+
 ## Cache and includes
 
-Caching is off by default. A cache key covers source, target, profile, rendering policy, extensions, writers, and `cacheKeySalt`. A custom extension or writer with nonserializable state requires an explicit salt. Change the salt when its behavior changes.
+Caching is off by default. A cache key covers source, target, profile, rendering policy, extensions, writers, renderers, and `cacheKeySalt`. A custom extension, writer, or renderer with nonserializable state requires an explicit salt. Change the salt when its behavior changes.
 
 `includeResolver` is a container-resolvable Carve `IncludeResolver`. It receives a request with `path`, `from`, `options`, `section`, and `budget`, then returns `['text' => $source, 'id' => $stableId]` or `['error' => 'not_found']` and the other documented causes. All parsing and rendering use the 0.2 include resolver. Include output is cached only when the resolver also implements `IncludeCacheKeyProvider`. `IncludeOptions` can narrow depth and byte limits; Carve does not expose the old resolver-call and warning limits yet, and nondefault values fail explicitly.

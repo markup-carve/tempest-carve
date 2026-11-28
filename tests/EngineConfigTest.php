@@ -62,6 +62,34 @@ final class EngineConfigTest extends TestCase
         self::assertStringContainsString('nofollow', (new CarveRenderer(extensions: [$extension]))->render('[x](https://example.com)'));
     }
 
+    public function testTableOfContentsUsesStandardRenderer(): void
+    {
+        $extension = (new ExtensionFactory())->create('table_of_contents');
+        $result = CarveRenderer::safe(extensions: [$extension])->renderWithReport("= A\n\n== B\n");
+
+        self::assertStringContainsString('<nav', $result->html);
+        self::assertStringContainsString('<a href="#B">B</a>', $result->html);
+        self::assertNotContains('extension-fallback-rendered', array_column($result->warnings, 'code'));
+    }
+
+    public function testTocPlacementUsesStandardRenderer(): void
+    {
+        $extension = (new ExtensionFactory())->create('toc_placement');
+        $result = CarveRenderer::safe(extensions: [$extension])->renderWithReport("Intro.\n\n::: toc\n:::\n\n= A\n\n== B\n");
+
+        self::assertStringContainsString('<nav', $result->html);
+        self::assertStringContainsString('<a href="#B">B</a>', $result->html);
+        self::assertNotContains('extension-fallback-rendered', array_column($result->warnings, 'code'));
+    }
+
+    public function testHostRendererOverridesStandardTocRenderer(): void
+    {
+        $extension = (new ExtensionFactory())->create('table_of_contents');
+        $config = new CarveConfig(renderers: ['carve.toc' => static fn (): string => '<nav class="custom">Custom</nav>']);
+
+        self::assertStringContainsString('<nav class="custom">Custom</nav>', CarveRenderer::safe($config, extensions: [$extension])->render("= A\n\n== B\n"));
+    }
+
     public function testUnknownOptionIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -23,7 +23,7 @@
     "require": {
         "php": "^8.5",
         "league/commonmark": "^2.9.2",
-        "markup-carve/carve-php": "dev-main#8767d7fcacbba18b7a50ee94cbed5603ead85956",
+        "markup-carve/carve-php": "dev-main#193e3a327c8da535cd5319271ba9ccdd928d54bf",
         "tempest/cache": "^3.19",
         "tempest/console": "^3.19",
         "tempest/mapper": "^3.19",

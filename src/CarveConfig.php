@@ -26,6 +26,7 @@ final readonly class CarveConfig
      * @param array<string, mixed> $urlPolicy
      * @param array<string, self> $namedRenderers
      * @param class-string<\MarkupCarve\Carve\Include\IncludeResolver>|null $includeResolver
+     * @param array<string, 'standard'|\Closure|array{standard: array<string, string>}> $renderers
      */
     public function __construct(
         public CarveProfile|string $profile = CarveProfile::Full,
@@ -45,6 +46,7 @@ final readonly class CarveConfig
         public array $namedRenderers = [],
         public ?string $includeResolver = null,
         public string $softBreakMode = 'newline',
+        public array $renderers = [],
     ) {
     }
 
