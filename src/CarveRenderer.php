@@ -333,6 +333,13 @@ final class CarveRenderer
     private function renderEngine(Node|string $source, array $options): RenderResult
     {
         [$options['extensions'], $transforms] = self::orderedExtensions($this->htmlExtensions());
+        $renderers = [];
+        foreach ($options['extensions'] as $extension) {
+            if (($extension->name === 'carve.toc' || $extension->name === 'carve.tocPlacement') && $extension->renderer === null) {
+                $renderers[$extension->name] = 'standard';
+            }
+        }
+        $options['renderers'] = array_replace($renderers, $this->config->renderers);
 
         $result = Carve::renderWithDocumentTransforms($source, $transforms, $options);
         if (($options['strictLosses'] ?? false) === true) {
@@ -527,11 +534,15 @@ final class CarveRenderer
         foreach ($this->config->writers as $writer) {
             $writers[] = $this->objectFingerprint($writer);
         }
+        $renderers = [];
+        foreach ($this->config->renderers as $name => $renderer) {
+            $renderers[$name] = $renderer instanceof Closure ? $this->objectFingerprint($renderer) : $renderer;
+        }
         $configuration = json_encode([
             InstalledVersions::getReference('markup-carve/carve-php'),
             $this->config->profileName(), $this->config->smartTypography, $this->config->softBreakMode, $this->config->sourceLines,
             $this->config->headingIds, $this->config->mode, $this->config->sections,
-            $this->config->rawHtml, $this->config->urlPolicy, $extensions, $writers,
+            $this->config->rawHtml, $this->config->urlPolicy, $extensions, $writers, $renderers,
             $this->config->cacheKeySalt,
         ], JSON_THROW_ON_ERROR);
 
