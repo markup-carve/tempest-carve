@@ -9,7 +9,7 @@ use Tempest\DateTime\Duration;
 final readonly class CarveConfig
 {
     /**
-     * @param list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider|string|array<string, mixed>> $extensions
+     * @param list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider|\MarkupCarve\Carve\Extension\Name|string|array<string, mixed>> $extensions
      * @param list<\MarkupCarve\Carve\Output\OutputWriter> $writers
      * @param string $cacheKeySalt
      * @param string|null $cacheStore
