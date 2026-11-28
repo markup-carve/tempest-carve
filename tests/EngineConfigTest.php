@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests;
 
 use InvalidArgumentException;
+use MarkupCarve\Carve\Extension\ExtensionDefinition;
+use MarkupCarve\Carve\Extension\Name;
 use MarkupCarve\Tempest\CarveConfig;
 use MarkupCarve\Tempest\CarveProfile;
 use MarkupCarve\Tempest\CarveRenderer;
@@ -127,6 +129,41 @@ final class EngineConfigTest extends TestCase
         self::assertStringContainsString('class="puml"', $legacy->render("```puml\nA -> B\n```"));
         $custom = new CarveRenderer(extensions: [$factory->create(['type' => 'mermaid', 'language' => 'custom', 'css_class' => 'diagram'])]);
         self::assertStringContainsString('class="diagram"', $custom->render("```custom\nA -> B\n```"));
+    }
+
+    public function testPlantumlFencesUseTheEngineNames(): void
+    {
+        $names = array_map(
+            static fn (ExtensionDefinition $definition): string => $definition->name,
+            array_filter((new EngineExtensionFactory())->create('plantuml'), static fn ($item): bool => $item instanceof ExtensionDefinition),
+        );
+
+        self::assertSame(['carve.plantuml.plantuml', 'carve.plantuml.puml'], array_values($names));
+    }
+
+    public function testNameCasesWorkLikeTheirStrings(): void
+    {
+        $factory = new ExtensionFactory();
+        $source = ":::: tabs\n::: tab \"One\"\nA\n:::\n::: tab \"Two\"\nB\n:::\n::::\n";
+
+        self::assertSame(
+            (new CarveRenderer(extensions: [$factory->create('tabs')]))->render($source),
+            (new CarveRenderer(extensions: [$factory->create(Name::Tabs)]))->render($source),
+        );
+        $aria = $factory->create(['type' => Name::Tabs, 'mode' => 'aria']);
+        self::assertStringContainsString('role="tablist"', (new CarveRenderer(extensions: [$aria]))->render($source));
+        self::assertSame($factory->fingerprint('tabs'), $factory->fingerprint(Name::Tabs));
+        self::assertContains('heading_levels', EngineExtensionFactory::types());
+        self::assertContains(Name::Wikilinks->value, EngineExtensionFactory::types());
+    }
+
+    public function testExternalLinksInternalHostsOption(): void
+    {
+        $extension = (new ExtensionFactory())->create(['type' => 'external_links', 'internal_hosts' => ['example.com']]);
+        $html = (new CarveRenderer(extensions: [$extension]))->render('[x](https://example.com) [y](https://other.org)');
+
+        self::assertStringContainsString('<a href="https://example.com">x</a>', $html);
+        self::assertStringContainsString('<a href="https://other.org" rel="noopener noreferrer" target="_blank">y</a>', $html);
     }
 
     public function testSoftBreakMode(): void

@@ -37,7 +37,7 @@ final class CarveInitializer implements Initializer
 
     /**
      * @param \Tempest\Container\Container $container
-     * @param list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider|string|array<string, mixed>> $entries
+     * @param list<\MarkupCarve\Carve\Extension\ExtensionDefinition|\MarkupCarve\Carve\Extension\ExtensionProvider|\MarkupCarve\Carve\Extension\Name|string|array<string, mixed>> $entries
      *
      * @throws \InvalidArgumentException
      *

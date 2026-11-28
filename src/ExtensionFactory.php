@@ -9,8 +9,8 @@ use InvalidArgumentException;
 use MarkupCarve\Carve\Extension\Claim;
 use MarkupCarve\Carve\Extension\ExtensionDefinition;
 use MarkupCarve\Carve\Extension\ExtensionProvider;
+use MarkupCarve\Carve\Extension\Name;
 use MarkupCarve\Carve\Extension\RenderHost;
-use MarkupCarve\Carve\Extension\Tabs;
 use MarkupCarve\Carve\Extension\Wikilinks;
 use MarkupCarve\Carve\Node;
 use MarkupCarve\Tempest\Highlight\TempestHighlightExtension;
@@ -18,12 +18,13 @@ use MarkupCarve\Tempest\Highlight\TempestHighlightExtension;
 final class ExtensionFactory
 {
     /**
-     * @param array<string, mixed>|string $entry
+     * @param \MarkupCarve\Carve\Extension\Name|array<string, mixed>|string $entry
      *
      * @throws \InvalidArgumentException
      */
-    public function create(array|string $entry): ExtensionDefinition|ExtensionProvider
+    public function create(Name|array|string $entry): ExtensionDefinition|ExtensionProvider
     {
+        $entry = self::plain($entry);
         $config = is_string($entry) ? ['type' => $entry] : $entry;
         $type = $config['type'] ?? null;
         if (!is_string($type) || $type === '') {
@@ -34,16 +35,6 @@ final class ExtensionFactory
             $this->only($config, [], $type);
 
             return new TempestHighlightExtension();
-        }
-        if ($type === 'tabs') {
-            $this->only($config, [], $type);
-
-            return new class implements ExtensionProvider {
-                public function definitions(): array
-                {
-                    return Tabs::extensions(true);
-                }
-            };
         }
         if ($type === 'wikilinks') {
             $this->only($config, ['url_template', 'url_generator', 'css_class', 'new_window'], $type);
@@ -171,16 +162,34 @@ final class ExtensionFactory
     }
 
     /**
-     * @param array<string, mixed>|string $entry
+     * @param \MarkupCarve\Carve\Extension\Name|array<string, mixed>|string $entry
      */
-    public function fingerprint(array|string $entry): ?string
+    public function fingerprint(Name|array|string $entry): ?string
     {
+        $entry = self::plain($entry);
         if (!$this->isPlainData($entry)) {
             return null;
         }
         $encoded = json_encode($entry);
 
         return $encoded === false ? null : 'entry:' . hash('sha256', $encoded);
+    }
+
+    /**
+     * @param \MarkupCarve\Carve\Extension\Name|array<string, mixed>|string $entry
+     *
+     * @return array<string, mixed>|string
+     */
+    private static function plain(Name|array|string $entry): array|string
+    {
+        if ($entry instanceof Name) {
+            return $entry->value;
+        }
+        if (is_array($entry) && ($entry['type'] ?? null) instanceof Name) {
+            $entry['type'] = $entry['type']->value;
+        }
+
+        return $entry;
     }
 
     private function isPlainData(mixed $value): bool

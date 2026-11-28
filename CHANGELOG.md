@@ -11,6 +11,10 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Rename the Carve 0.2 engine imports to `MarkupCarve\Carve\Carve` and pin the renamed engine at `db1624daf9`. Remove temporary `Carve2` names and 0.1 code paths.
 
+### Improvements
+
+- Extension entries accept the `MarkupCarve\Carve\Extension\Name` cases from carve-php, as the entry itself or as its `type`. `tabs` takes a `mode` option (`css` or `aria`) and `external_links` takes `internal_hosts`. The PlantUML fences are now named `carve.plantuml.plantuml` and `carve.plantuml.puml`; their HTML is unchanged.
+
 ### Changed
 
 - Register the standard table of contents renderers that carve-php main requires; move carve-php to main.

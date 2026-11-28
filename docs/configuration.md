@@ -42,6 +42,18 @@ $html = $carve->render($source, CarveProfile::Comment);
 
 `extensions` accepts Carve `ExtensionDefinition` and `ExtensionProvider` objects, or their container-resolvable class names. This adapter also supplies the names `tabs`, `mermaid`, `plantuml` (including `puml` fences), `fenced_render` with a `language` option, and `tempest_highlight`. The names `lowercase_heading_ids` and `ascii_heading_ids` moved to `headingIds`. The engine bundle names are available through `EngineExtensionFactory::types()`. Option arrays use a `type` and snake case factory parameter names. `wikilinks` accepts `url_template`, `url_generator`, `css_class`, and `new_window`. Unknown names and options fail at startup.
 
+Every engine name also exists as a `MarkupCarve\Carve\Extension\Name` case. Use it in place of the string, alone or as the `type` of an option array:
+
+```php
+use MarkupCarve\Carve\Extension\Name;
+
+// String form
+new CarveConfig(extensions: ['tabs', ['type' => 'external_links', 'internal_hosts' => ['example.com']]]);
+
+// Name form, same result
+new CarveConfig(extensions: [Name::Tabs, ['type' => Name::ExternalLinks, 'internal_hosts' => ['example.com']]]);
+```
+
 `writers` accepts Carve `OutputWriter` instances. The engine ships `html`, `carve`, `text`, `markdown`, and `ansi`. Register custom writers only for additional targets.
 
 `renderers` maps extension names to `'standard'`, a `Closure`, or a supported `['standard' => [option => value]]` map. The adapter registers the standard renderer for `table_of_contents` and `toc_placement` when configured. An entry in `renderers` for the same extension takes precedence.
